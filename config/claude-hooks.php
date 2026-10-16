@@ -15,4 +15,16 @@ return [
 
     'hooks' => [],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Project Path
+    |--------------------------------------------------------------------------
+    |
+    | The folder whose .claude/settings.json install writes. Null means the
+    | application's base path.
+    |
+    */
+
+    'project_path' => null,
+
 ];

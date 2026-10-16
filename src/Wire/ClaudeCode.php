@@ -8,10 +8,13 @@ use RobertoGallea\ClaudeHooks\Event;
 use RobertoGallea\ClaudeHooks\HookResponse;
 use RobertoGallea\ClaudeHooks\Inputs\GenericInput;
 use RobertoGallea\ClaudeHooks\Inputs\HookInput;
+use RobertoGallea\ClaudeHooks\InvalidRegistration;
+use RobertoGallea\ClaudeHooks\Registration;
 use RobertoGallea\ClaudeHooks\Responses\BareResponse;
+use RobertoGallea\ClaudeHooks\Transport;
 
 /**
- * The translation seam: the only place that knows Claude Code's payload and response JSON.
+ * The translation seam: the only place that knows Claude Code's payload, response and hook handler JSON.
  *
  * @internal
  */
@@ -86,6 +89,49 @@ final class ClaudeCode
         ]) : []) + ($specific === [] ? [] : [
             'hookSpecificOutput' => ['hookEventName' => $response->event->value, ...$specific],
         ]);
+    }
+
+    /**
+     * The hook handler of a Registration's Settings Entry, with only the fields that differ from Claude Code's defaults.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws InvalidRegistration
+     */
+    public function handler(Registration $registration): array
+    {
+        if ($registration->transport === Transport::Http) {
+            throw new InvalidRegistration("{$registration->command} uses the http Transport, which install cannot write yet: use the command Transport.");
+        }
+
+        return $this->withoutNulls([
+            'type' => 'command',
+            'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" '.$registration->signature,
+            'if' => $registration->if,
+            'timeout' => $registration->timeout,
+            'statusMessage' => $registration->statusMessage,
+            'async' => $registration->async ?: null,
+            'asyncRewake' => $registration->asyncRewake ?: null,
+            'onFailure' => $registration->failClosed ? 'block' : null,
+        ]);
+    }
+
+    /**
+     * The signature of the Hook Command a hook handler runs, when it is the handler of a Managed Entry; null when the
+     * handler belongs to the user.
+     *
+     * @param  array<array-key, mixed>  $handler
+     */
+    public function managedSignature(array $handler): ?string
+    {
+        $command = $handler['command'] ?? null;
+
+        if (($handler['type'] ?? null) === 'command' && is_string($command)
+            && preg_match('/\Aphp "\$CLAUDE_PROJECT_DIR\/artisan" (\S+)\z/', $command, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return null;
     }
 
     /**

@@ -17,6 +17,8 @@ class ClaudeHooksServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../config/claude-hooks.php' => config_path('claude-hooks.php'),
             ], 'claude-hooks-config');
+
+            $this->commands([Console\InstallCommand::class]);
         }
     }
 }
