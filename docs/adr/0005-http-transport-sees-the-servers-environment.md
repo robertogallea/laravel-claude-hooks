@@ -1,0 +1,3 @@
+# The http Transport sees the server's environment, not Claude Code's
+
+Over the `command` Transport a Hook Command inherits Claude Code's environment, so a guard sees the same database configuration the agent's own `php artisan` calls would use. Over `http`, the request is answered by an already running application with its own environment. A guard can therefore approve a command that would run against a different database. Ready-made Hooks declare whether they are safe over `http`; environment-sensitive guards such as `guard-artisan` are command-only, and install refuses to switch them. Because Claude Code treats a non-2xx response or a refused connection as a non-blocking error, `doctor` warns about any `http` guard that does not fail closed.
