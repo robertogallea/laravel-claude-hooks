@@ -433,3 +433,17 @@ it('writes the Ready-made pint after Edit and Write, with one handler for each P
         ],
     ]);
 });
+
+it('writes the Ready-made pest for Stop without a matcher, with a timeout of 300 seconds', function () {
+    enableReadyMadeHook('pest');
+
+    $this->artisan('claude-hooks:install')->assertSuccessful();
+
+    expect(json_decode(settings(), true)['hooks'])->toBe([
+        'Stop' => [
+            ['hooks' => [
+                ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" claude-hooks:pest', 'timeout' => 300],
+            ]],
+        ],
+    ]);
+});

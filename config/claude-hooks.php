@@ -66,6 +66,17 @@ return [
             'timeout' => null,
         ],
 
+        // Runs the test suite from the project path when Claude is about to stop and git reports changed PHP
+        // files (or git cannot tell). When it fails, Claude is sent back once with the last `tail` lines of the
+        // output; if it still fails at the next stop, Claude may stop and the user is warned. Its timeout is
+        // 300 seconds; set `timeout` for a slower suite.
+        'pest' => [
+            'enabled' => false,
+            'command' => 'vendor/bin/pest --compact',
+            'tail' => 40,
+            'timeout' => null,
+        ],
+
     ],
 
     /*
