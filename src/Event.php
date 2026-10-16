@@ -62,4 +62,33 @@ enum Event: string
             default => Inputs\GenericInput::class,
         };
     }
+
+    /**
+     * Whether Claude Code filters this event by matcher; on the others a matcher is silently ignored.
+     */
+    public function takesMatcher(): bool
+    {
+        return ! in_array($this, [
+            self::UserPromptSubmit, self::PostToolBatch, self::Stop, self::TeammateIdle, self::TaskCreated,
+            self::TaskCompleted, self::WorktreeCreate, self::WorktreeRemove, self::MessageDisplay, self::CwdChanged,
+        ], true);
+    }
+
+    /**
+     * Whether Claude Code evaluates a handler's `if` filter on this event; on the others a handler with `if` never runs.
+     */
+    public function evaluatesIf(): bool
+    {
+        return in_array($this, self::toolEvents(), true);
+    }
+
+    /**
+     * The tool events, the only ones that evaluate `if`.
+     *
+     * @return list<self>
+     */
+    public static function toolEvents(): array
+    {
+        return [self::PreToolUse, self::PostToolUse, self::PostToolUseFailure, self::PermissionRequest, self::PermissionDenied];
+    }
 }

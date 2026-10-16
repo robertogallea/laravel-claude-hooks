@@ -73,6 +73,16 @@ abstract class HookCommand extends Command
         return $classes ?: throw new LogicException(static::class.'::hook() must take a Hook Input as its first parameter.');
     }
 
+    /**
+     * Whether this Hook Command gives the same answer when an already running application serves it over the
+     * http Transport, with the server's environment instead of Claude Code's. Override it to return false when
+     * the answer depends on the environment, such as the database Claude's environment points at.
+     */
+    public static function httpSafe(): bool
+    {
+        return true;
+    }
+
     private static function hookMethod(): ReflectionMethod
     {
         if (! method_exists(static::class, 'hook')) {
