@@ -389,3 +389,20 @@ it('writes an enabled Ready-made Hook with the matcher and timeout its config ov
         ],
     ]);
 });
+
+it('writes the Ready-made guard-artisan so that Claude Code blocks the command when the hook fails', function () {
+    enableReadyMadeHook('guard-artisan');
+
+    $this->artisan('claude-hooks:install')->assertSuccessful();
+
+    expect(json_decode(settings(), true)['hooks'])->toBe([
+        'PreToolUse' => [
+            ['matcher' => 'Bash', 'hooks' => [[
+                'type' => 'command',
+                'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" claude-hooks:guard-artisan',
+                'if' => 'Bash(php artisan *)',
+                'onFailure' => 'block',
+            ]]],
+        ],
+    ]);
+});

@@ -27,6 +27,19 @@ return [
             'timeout' => null,
         ],
 
+        // Denies (mode "ask": asks about) destructive Artisan commands, also inside compound Bash commands,
+        // unless the connection they would use is local: SQLite always is, any other database only when the
+        // app is local and its host is in local_hosts ('mysql' and 'pgsql' are the Sail service names).
+        // destructive is a regex alternation of command names. It fails closed.
+        'guard-artisan' => [
+            'enabled' => false,
+            'mode' => 'deny',
+            'destructive' => 'migrate:(fresh|refresh|reset|rollback)|db:wipe',
+            'local_hosts' => ['127.0.0.1', 'localhost', 'mysql', 'pgsql'],
+            'matchers' => ['Bash' => 'Bash'],
+            'timeout' => null,
+        ],
+
     ],
 
     /*

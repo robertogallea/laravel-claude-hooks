@@ -14,6 +14,7 @@ abstract class ReadyMadeHook extends HookCommand
     /** Every Ready-made Hook. */
     private const HOOKS = [
         GuardMigrations::class,
+        GuardArtisan::class,
     ];
 
     /** The name of this hook's config, under `claude-hooks.hooks`. */

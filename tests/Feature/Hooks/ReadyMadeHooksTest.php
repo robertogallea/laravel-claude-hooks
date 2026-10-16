@@ -6,7 +6,8 @@ use RobertoGallea\ClaudeHooks\Registrations;
 
 it('registers no Ready-made Hook until it is enabled', function () {
     expect(app(Registrations::class)->commands())->toBe([])
-        ->and(Artisan::all())->not->toHaveKey('claude-hooks:guard-migrations');
+        ->and(Artisan::all())->not->toHaveKey('claude-hooks:guard-migrations')
+        ->and(Artisan::all())->not->toHaveKey('claude-hooks:guard-artisan');
 });
 
 it('registers an enabled Ready-made Hook as an Artisan command', function () {
