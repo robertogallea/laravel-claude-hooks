@@ -3,6 +3,8 @@
 namespace RobertoGallea\ClaudeHooks\Hooks;
 
 use Illuminate\Database\Migrations\Migrator;
+use Illuminate\Database\QueryException;
+use PDOException;
 use RobertoGallea\ClaudeHooks\HookResponse;
 use RobertoGallea\ClaudeHooks\Inputs\SessionStartInput;
 
@@ -63,15 +65,34 @@ class SessionContext extends ReadyMadeHook
         return $paths;
     }
 
-    /** The line on pending migrations: all of them, when the database has no migrations table yet. */
+    /**
+     * The line on pending migrations: all of them, when the database has no migrations table yet, and why they
+     * could not be read, when the database cannot be reached, so that the other lines still reach Claude.
+     */
     private function pendingMigrations(): string
     {
         /** @var Migrator $migrator */
         $migrator = $this->laravel->make('migrator');
         $files = array_keys($migrator->getMigrationFiles($this->migrationPaths()));
-        $ran = $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [];
+
+        try {
+            $ran = $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [];
+        } catch (QueryException|PDOException $e) {
+            return 'Could not read migrations: '.$this->shortMessage($e).'.';
+        }
+
         $pending = array_values(array_diff($files, $ran));
 
         return $pending === [] ? 'All migrations have run.' : 'Pending migrations: '.implode(', ', $pending).'.';
+    }
+
+    /** The driver's message, without the SQLSTATE codes, the connection details and the query Laravel adds. */
+    private function shortMessage(QueryException|PDOException $e): string
+    {
+        $message = ($e instanceof QueryException ? $e->getPrevious() : null)?->getMessage() ?? $e->getMessage();
+        $message = (string) preg_replace('/^SQLSTATE\[\w+\](\s*\[\w+\])?\s*/', '', $message);
+        $message = (string) preg_replace('/\s*\(Connection: .*\)$/s', '', $message);
+
+        return rtrim($message, '. ');
     }
 }

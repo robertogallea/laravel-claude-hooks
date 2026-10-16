@@ -87,6 +87,24 @@ it('does not touch the database when the pending migrations line is off', functi
     config(['database.default' => 'testing']); // RefreshDatabase rolls back the default connection
 });
 
+it('keeps its other lines and says it could not read migrations when the database is unreachable', function () {
+    config([
+        'database.default' => 'mysql',
+        'database.connections.mysql' => ['driver' => 'mysql', 'host' => 'db.unreachable.invalid', 'database' => 'app'],
+    ]);
+    app()->detectEnvironment(fn () => 'local');
+
+    $context = $this->runHook(SessionContext::class, SessionStartInput::fake())->json['hookSpecificOutput']['additionalContext'];
+
+    config(['database.default' => 'testing']); // RefreshDatabase rolls back the default connection
+
+    expect($context)
+        ->toStartWith('Laravel '.app()->version().' on PHP '.PHP_VERSION.".\nEnvironment: local.\nDefault database connection: 'mysql'.\nCould not read migrations: ")
+        ->toMatch("~\nCould not read migrations: [^\n]*db\.unreachable\.invalid[^\n]*[^.]\.$~")
+        ->not->toContain('SQLSTATE')
+        ->not->toContain('SQL:');
+});
+
 it('has no opinion when every line is off', function () {
     enableReadyMadeHook('session-context', ['lines' => ['versions' => false, 'environment' => false, 'connection' => false, 'migrations' => false]]);
 
