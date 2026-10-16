@@ -26,10 +26,12 @@ final class HookResult
         return $this;
     }
 
-    /** The hook made no permission decision. */
+    /** The hook made no decision: no permission decision and no block. */
     public function assertNoDecision(): self
     {
         Assert::assertNull($this->get('hookSpecificOutput.permissionDecision'), "The hook made a decision:\n{$this->output}");
+        Assert::assertNull($this->get('decision'), "The hook made a decision:\n{$this->output}");
+        Assert::assertNull($this->get('hookSpecificOutput.decision'), "The hook made a decision:\n{$this->output}");
 
         return $this;
     }
@@ -52,7 +54,19 @@ final class HookResult
     /** @param  array<string, mixed>  $input */
     public function assertUpdatedInput(array $input): self
     {
-        Assert::assertSame($input, $this->get('hookSpecificOutput.updatedInput'), "The hook did not update the input as expected:\n{$this->output}");
+        Assert::assertSame($input, $this->get($this->isPermissionRequest() ? 'hookSpecificOutput.decision.updatedInput' : 'hookSpecificOutput.updatedInput'), "The hook did not update the input as expected:\n{$this->output}");
+
+        return $this;
+    }
+
+    /**
+     * The hook replaced what Claude sees of the tool's output with exactly this value.
+     *
+     * @param  array<string, mixed>|string  $output
+     */
+    public function assertUpdatedOutput(array|string $output): self
+    {
+        Assert::assertSame($output, $this->get('hookSpecificOutput.updatedToolOutput'), "The hook did not replace the tool output as expected:\n{$this->output}");
 
         return $this;
     }
@@ -69,15 +83,88 @@ final class HookResult
         return $this->assertPermissionDecision('deny', $reason);
     }
 
-    private function assertPermissionDecision(string $decision, ?string $reason): self
+    /** The hook blocks the action (top-level `decision: "block"`), optionally with a reason containing the given text. */
+    public function assertBlocked(?string $reason = null): self
     {
-        Assert::assertSame($decision, $this->get('hookSpecificOutput.permissionDecision'), "The hook did not answer '{$decision}':\n{$this->output}");
+        Assert::assertSame('block', $this->get('decision'), "The hook did not block:\n{$this->output}");
 
-        if ($reason !== null) {
-            Assert::assertStringContainsString($reason, (string) $this->get('hookSpecificOutput.permissionDecisionReason'));
+        return $reason === null ? $this : $this->assertField('reason', $reason, 'gave no reason');
+    }
+
+    /** The hook sets the session title, optionally to one containing the given text. */
+    public function assertSessionTitle(?string $title = null): self
+    {
+        return $this->assertField('hookSpecificOutput.sessionTitle', $title, 'set no session title');
+    }
+
+    /** The hook supplies the first user message of the session, optionally containing the given text. */
+    public function assertInitialUserMessage(?string $text = null): self
+    {
+        return $this->assertField('hookSpecificOutput.initialUserMessage', $text, 'supplied no initial user message');
+    }
+
+    /** The hook shows the user a warning, optionally containing the given text. */
+    public function assertSystemMessage(?string $text = null): self
+    {
+        return $this->assertField('systemMessage', $text, 'showed no system message');
+    }
+
+    /** The hook stops Claude entirely, optionally with a reason containing the given text. */
+    public function assertStoppedSession(?string $reason = null): self
+    {
+        Assert::assertFalse($this->get('continue') ?? true, "The hook did not stop the session:\n{$this->output}");
+
+        return $this->assertField('stopReason', $reason, 'gave no stop reason');
+    }
+
+    /**
+     * The PermissionRequest hook applies exactly these permission updates.
+     *
+     * @param  list<array<string, mixed>>  $permissions
+     */
+    public function assertUpdatedPermissions(array $permissions): self
+    {
+        Assert::assertSame($permissions, $this->get('hookSpecificOutput.decision.updatedPermissions'), "The hook did not update permissions as expected:\n{$this->output}");
+
+        return $this;
+    }
+
+    /** The PermissionRequest hook denies and stops Claude. */
+    public function assertInterrupted(): self
+    {
+        Assert::assertTrue($this->get('hookSpecificOutput.decision.interrupt') ?? false, "The hook did not interrupt Claude:\n{$this->output}");
+
+        return $this;
+    }
+
+    /** A string field is present and, when text is given, contains it. */
+    private function assertField(string $path, ?string $text, string $failure): self
+    {
+        $value = $this->get($path);
+        Assert::assertIsString($value, "The hook {$failure}:\n{$this->output}");
+
+        if ($text !== null) {
+            Assert::assertStringContainsString($text, $value, "The hook {$failure} containing '{$text}':\n{$this->output}");
         }
 
         return $this;
+    }
+
+    /** A permission decision, read where its event puts it: PreToolUse's `permissionDecision`, or PermissionRequest's `decision.behavior`. */
+    private function assertPermissionDecision(string $decision, ?string $reason): self
+    {
+        [$decisionPath, $reasonPath] = $this->isPermissionRequest()
+            ? ['hookSpecificOutput.decision.behavior', 'hookSpecificOutput.decision.message']
+            : ['hookSpecificOutput.permissionDecision', 'hookSpecificOutput.permissionDecisionReason'];
+
+        Assert::assertSame($decision, $this->get($decisionPath), "The hook did not answer '{$decision}':\n{$this->output}");
+
+        return $reason === null ? $this : $this->assertField($reasonPath, $reason, 'gave no reason');
+    }
+
+    private function isPermissionRequest(): bool
+    {
+        return $this->get('hookSpecificOutput.hookEventName') === 'PermissionRequest';
     }
 
     /** A field of the JSON response by dot path. */

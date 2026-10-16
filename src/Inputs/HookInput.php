@@ -4,7 +4,6 @@ namespace RobertoGallea\ClaudeHooks\Inputs;
 
 use Illuminate\Support\Arr;
 use RobertoGallea\ClaudeHooks\Event;
-use RobertoGallea\ClaudeHooks\HookResponse;
 
 /** The typed form of the payload Claude Code sends for one Hook Event. */
 abstract class HookInput
@@ -14,8 +13,8 @@ abstract class HookInput
      */
     final public function __construct(public readonly array $payload) {}
 
-    /** The Hook Event this Hook Input is for. */
-    abstract public static function event(): Event;
+    /** The Hook Event this Hook Input class is for, or null when it stands for any event. */
+    abstract public static function event(): ?Event;
 
     /**
      * A Hook Input with realistic common fields, for tests.
@@ -24,12 +23,12 @@ abstract class HookInput
      */
     public static function fake(array $overrides = []): static
     {
-        return new static(array_replace_recursive([
+        return new static(array_replace([
             'session_id' => 'fake-session',
             'transcript_path' => sys_get_temp_dir().'/fake-transcript.jsonl',
             'cwd' => base_path(),
             'permission_mode' => 'default',
-            'hook_event_name' => static::event()->value,
+            'hook_event_name' => static::event()?->value,
         ], static::fakeDefaults(), $overrides));
     }
 
@@ -43,6 +42,12 @@ abstract class HookInput
     public function get(string $path, mixed $default = null): mixed
     {
         return Arr::get($this->payload, $path, $default);
+    }
+
+    /** The name of the Hook Event that fired, as Claude Code sent it. */
+    public function eventName(): string
+    {
+        return (string) $this->get('hook_event_name', static::event()?->value);
     }
 
     public function sessionId(): string
@@ -65,6 +70,18 @@ abstract class HookInput
         return $this->get('permission_mode');
     }
 
+    /** The subagent or in-process teammate the hook fires in, if any. */
+    public function agentId(): ?string
+    {
+        return $this->get('agent_id');
+    }
+
+    /** The agent's name, such as "Explore", when the hook fires inside a subagent or the session uses --agent. */
+    public function agentType(): ?string
+    {
+        return $this->get('agent_type');
+    }
+
     /**
      * A copy with the given payload fields replaced.
      *
@@ -73,10 +90,5 @@ abstract class HookInput
     public function with(array $fields): static
     {
         return new static(array_replace($this->payload, $fields));
-    }
-
-    protected function respond(): HookResponse
-    {
-        return HookResponse::for(static::event());
     }
 }

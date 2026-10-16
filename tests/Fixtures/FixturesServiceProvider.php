@@ -12,6 +12,7 @@ class FixturesServiceProvider extends ServiceProvider
         $this->commands([
             BrokenHook::class,
             GuardEnvFiles::class,
+            SharedContext::class,
         ]);
     }
 }

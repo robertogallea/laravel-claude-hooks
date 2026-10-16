@@ -136,3 +136,17 @@ it('fails clearly on a payload that is not JSON', function () {
     expect($process->getExitCode())->toBe(1)
         ->and($process->getOutput().$process->getErrorOutput())->toContain('The hook payload is not valid JSON');
 });
+
+it('answers a union-typed hook for the event named in the payload', function () {
+    $process = artisan(['fixture:shared-context'], json_encode([
+        'session_id' => 'abc123',
+        'transcript_path' => '/Users/.../.claude/projects/.../00893aaf-19fa-41d2-8238-13269b9b3ca0.jsonl',
+        'cwd' => '/Users/...',
+        'hook_event_name' => 'SessionStart',
+        'source' => 'startup',
+        'model' => 'claude-opus-5',
+    ]));
+
+    expect($process->getExitCode())->toBe(0)
+        ->and($process->getOutput())->toBe('{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"Answered as RobertoGallea\\\\ClaudeHooks\\\\Inputs\\\\SessionStartInput for SessionStart"}}'."\n");
+});

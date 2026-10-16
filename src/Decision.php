@@ -9,4 +9,5 @@ enum Decision: string
     case Deny = 'deny';
     case Ask = 'ask';
     case Defer = 'defer';
+    case Block = 'block';
 }

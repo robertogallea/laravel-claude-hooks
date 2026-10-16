@@ -2,14 +2,6 @@
 
 use RobertoGallea\ClaudeHooks\Inputs\PreToolUseInput;
 use RobertoGallea\ClaudeHooks\Tests\Fixtures\GuardEnvFiles;
-use RobertoGallea\ClaudeHooks\Tests\Fixtures\ScriptedPreToolUse;
-
-function preToolUse(Closure $answer, ?PreToolUseInput $input = null)
-{
-    ScriptedPreToolUse::$answer = $answer;
-
-    return test()->runHook(ScriptedPreToolUse::class, $input ?? PreToolUseInput::fake()->bash('ls'));
-}
 
 it('denies a tool call with a reason', function () {
     $this->runHook(GuardEnvFiles::class, PreToolUseInput::fake()->edit(base_path('.env')))

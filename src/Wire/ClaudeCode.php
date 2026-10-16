@@ -3,9 +3,12 @@
 namespace RobertoGallea\ClaudeHooks\Wire;
 
 use InvalidArgumentException;
+use RobertoGallea\ClaudeHooks\Decision;
 use RobertoGallea\ClaudeHooks\Event;
 use RobertoGallea\ClaudeHooks\HookResponse;
+use RobertoGallea\ClaudeHooks\Inputs\GenericInput;
 use RobertoGallea\ClaudeHooks\Inputs\HookInput;
+use RobertoGallea\ClaudeHooks\Responses\BareResponse;
 
 /**
  * The translation seam: the only place that knows Claude Code's payload and response JSON.
@@ -28,9 +31,13 @@ final class ClaudeCode
             return new $accepted[0]($payload);
         }
 
-        $class = Event::tryFrom((string) $name)?->inputClass();
+        $class = Event::tryFrom((string) $name)?->inputClass() ?? GenericInput::class;
 
-        if ($class === null || ! in_array($class, $accepted, true)) {
+        if (! in_array($class, $accepted, true)) {
+            $class = in_array(GenericInput::class, $accepted, true) ? GenericInput::class : null;
+        }
+
+        if ($class === null) {
             throw new InvalidArgumentException("This hook does not handle the '{$name}' event.");
         }
 
@@ -44,15 +51,49 @@ final class ClaudeCode
      */
     public function encode(HookResponse $response): array
     {
-        $specific = array_filter([
-            'permissionDecision' => $response->decision?->value,
-            'permissionDecisionReason' => $response->reason,
-            'updatedInput' => $response->updatedInput,
+        $specific = $this->withoutNulls(match ($response->event) {
+            Event::PreToolUse => [
+                'permissionDecision' => $response->decision?->value,
+                'permissionDecisionReason' => $response->reason,
+                'updatedInput' => $response->updatedInput,
+            ],
+            Event::PermissionRequest => [
+                'decision' => $response->decision === null ? null : $this->withoutNulls([
+                    'behavior' => $response->decision->value,
+                    'updatedInput' => $response->updatedInput,
+                    'updatedPermissions' => $response->updatedPermissions,
+                    'message' => $response->reason,
+                    'interrupt' => $response->interrupt ?: null,
+                ]),
+            ],
+            default => [],
+        } + [
             'additionalContext' => $response->context,
-        ], fn (mixed $value) => $value !== null);
+            'sessionTitle' => $response->sessionTitle,
+            'initialUserMessage' => $response->initialUserMessage,
+            'updatedToolOutput' => $response->updatedToolOutput,
+        ]);
 
-        return $specific === [] ? [] : [
+        $universal = $response instanceof BareResponse ? [] : $this->withoutNulls([
+            'continue' => $response->stopReason === null ? null : false,
+            'stopReason' => $response->stopReason,
+            'systemMessage' => $response->systemMessage,
+        ]);
+
+        return $universal + ($response->decision === Decision::Block ? $this->withoutNulls([
+            'decision' => 'block',
+            'reason' => $response->reason,
+        ]) : []) + ($specific === [] ? [] : [
             'hookSpecificOutput' => ['hookEventName' => $response->event->value, ...$specific],
-        ];
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $fields
+     * @return array<string, mixed>
+     */
+    private function withoutNulls(array $fields): array
+    {
+        return array_filter($fields, fn (mixed $value) => $value !== null);
     }
 }
