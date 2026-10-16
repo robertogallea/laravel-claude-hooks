@@ -67,7 +67,9 @@ class SessionContext extends ReadyMadeHook
 
     /**
      * The line on pending migrations: all of them, when the database has no migrations table yet, and why they
-     * could not be read, when the database cannot be reached, so that the other lines still reach Claude.
+     * could not be read, when the database cannot be reached, so that the other lines still reach Claude. It reads
+     * them from the default connection, the one the line before names: the migrator's repository keeps the last
+     * connection a migrate command ran on, which need not be it.
      */
     private function pendingMigrations(): string
     {
@@ -76,7 +78,10 @@ class SessionContext extends ReadyMadeHook
         $files = array_keys($migrator->getMigrationFiles($this->migrationPaths()));
 
         try {
-            $ran = $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [];
+            $ran = $migrator->usingConnection(
+                config('database.default'),
+                fn () => $migrator->repositoryExists() ? $migrator->getRepository()->getRan() : [],
+            );
         } catch (QueryException|PDOException $e) {
             return 'Could not read migrations: '.$this->shortMessage($e).'.';
         }
