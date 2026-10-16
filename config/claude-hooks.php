@@ -56,6 +56,16 @@ return [
             'timeout' => null,
         ],
 
+        // Runs Pint quietly on each PHP file Claude edits or writes, Blade templates excepted; when Pint
+        // fails, Claude is told why, and the edit stands. Binary null means vendor/bin/pint under the
+        // project path. Its `if` filters keep Laravel from booting for files that are not PHP.
+        'pint' => [
+            'enabled' => false,
+            'binary' => null,
+            'matchers' => ['Edit|Write' => 'Edit|Write'],
+            'timeout' => null,
+        ],
+
     ],
 
     /*

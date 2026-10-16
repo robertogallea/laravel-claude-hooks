@@ -418,3 +418,18 @@ it('writes the Ready-made session-context for SessionStart without a matcher', f
         ],
     ]);
 });
+
+it('writes the Ready-made pint after Edit and Write, with one handler for each PHP filter', function () {
+    enableReadyMadeHook('pint');
+
+    $this->artisan('claude-hooks:install')->assertSuccessful();
+
+    expect(json_decode(settings(), true)['hooks'])->toBe([
+        'PostToolUse' => [
+            ['matcher' => 'Edit|Write', 'hooks' => [
+                ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" claude-hooks:pint', 'if' => 'Edit(*.php)'],
+                ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" claude-hooks:pint', 'if' => 'Write(*.php)'],
+            ]],
+        ],
+    ]);
+});

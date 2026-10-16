@@ -16,6 +16,7 @@ abstract class ReadyMadeHook extends HookCommand
         GuardMigrations::class,
         GuardArtisan::class,
         SessionContext::class,
+        Pint::class,
     ];
 
     /** The name of this hook's config, under `claude-hooks.hooks`. */
