@@ -4,7 +4,9 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-First release, 0.1.0.
+## [0.1.0] - 2026-10-16
+
+First release.
 
 ### Added
 
@@ -22,4 +24,5 @@ First release, 0.1.0.
 - A Laravel Boost skill, `laravel-claude-hooks-writing-hooks`, for coding agents.
 - A scheduled CI job that compares the package's Hook Events with the Claude Code hooks reference.
 
-[Unreleased]: https://github.com/robertogallea/laravel-claude-hooks/commits/main
+[Unreleased]: https://github.com/robertogallea/laravel-claude-hooks/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/robertogallea/laravel-claude-hooks/releases/tag/v0.1.0
