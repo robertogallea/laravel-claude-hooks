@@ -26,7 +26,12 @@ class ClaudeHooksServiceProvider extends ServiceProvider
                 __DIR__.'/../config/claude-hooks.php' => config_path('claude-hooks.php'),
             ], 'claude-hooks-config');
 
-            $this->commands([Console\InstallCommand::class, Console\DoctorCommand::class]);
+            $this->publishes([
+                __DIR__.'/../stubs/claude-hook.stub' => base_path('stubs/claude-hook.stub'),
+                __DIR__.'/../stubs/claude-hook.test.stub' => base_path('stubs/claude-hook.test.stub'),
+            ], 'claude-hooks-stubs');
+
+            $this->commands([Console\InstallCommand::class, Console\DoctorCommand::class, Console\MakeClaudeHookCommand::class]);
         }
 
         // Read when Artisan starts, so enabling a Ready-made Hook takes effect in the next Artisan process. Also

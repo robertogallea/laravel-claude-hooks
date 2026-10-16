@@ -1,0 +1,27 @@
+<?php
+
+namespace {{ namespace }};
+
+use RobertoGallea\ClaudeHooks\Attributes\ClaudeHook;
+use RobertoGallea\ClaudeHooks\HookCommand;
+use RobertoGallea\ClaudeHooks\HookResponse;
+use RobertoGallea\ClaudeHooks\Inputs\{{ input }};
+
+/**
+ * {{ event }} hook: describe the rule it enforces. Run `php artisan claude-hooks:install` to write its Settings Entry.
+ */
+{{ registration }}
+class {{ class }} extends HookCommand
+{
+    protected $signature = '{{ signature }}';
+
+    protected $description = '{{ event }} hook: describe the rule it enforces';
+
+    /**
+     * Answer with a Hook Response built by the Hook Input's helpers, or null for no opinion.
+     */
+    public function hook({{ input }} $input): ?HookResponse
+    {
+        return null;
+    }
+}

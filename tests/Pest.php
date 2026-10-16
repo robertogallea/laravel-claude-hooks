@@ -70,3 +70,25 @@ function givenSettings(string $json, string $file = 'settings.json'): void
     File::ensureDirectoryExists(test()->project.'/.claude');
     file_put_contents(test()->project."/.claude/{$file}", $json);
 }
+
+/**
+ * Lint and load a generated class, returning its reflection.
+ *
+ * @param  class-string  $class
+ * @return ReflectionClass<object>
+ */
+function generatedClass(string $path, string $class): ReflectionClass
+{
+    lints($path);
+
+    require_once $path;
+
+    return new ReflectionClass($class);
+}
+
+/** Assert that a generated PHP file has no syntax errors. */
+function lints(string $path): void
+{
+    exec(escapeshellarg(PHP_BINARY).' -l '.escapeshellarg($path).' 2>&1', $output, $status);
+    expect($status)->toBe(0, implode("\n", $output));
+}

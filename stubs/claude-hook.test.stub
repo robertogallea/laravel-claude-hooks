@@ -1,0 +1,11 @@
+<?php
+
+use {{ namespacedClass }};
+use RobertoGallea\ClaudeHooks\Inputs\{{ input }};
+use RobertoGallea\ClaudeHooks\Testing\InteractsWithClaudeHooks;
+
+uses(InteractsWithClaudeHooks::class);
+
+it('has no opinion until it enforces its rule', function () {
+    $this->runHook({{ class }}::class, {{ input }}::fake())->assertNoOpinion();
+});
