@@ -94,6 +94,31 @@ it('runs the tests anyway when git cannot tell what changed', function (int $exi
     'git not installed' => [127, 'sh: 1: git: not found'],
 ]);
 
+it('runs the suite without the variables the application loaded from its .env file, as artisan test does', function () {
+    $directory = sys_get_temp_dir().'/claude-hooks-pest-env-'.uniqid();
+    mkdir($directory);
+    file_put_contents($directory.'/.env', "APP_ENV=local\n# a comment\nexport DB_CONNECTION=sqlite\nAPP_NAME=\"Demo app\"\n");
+    $this->app->useEnvironmentPath($directory);
+    Process::fake(['git status*' => Process::result(output: " M app/Money.php\n"), '*' => Process::result()]);
+
+    $this->runHook(Pest::class, StopInput::fake())->assertNoOpinion();
+
+    Process::assertRan(fn (PendingProcess $process) => $process->command === 'vendor/bin/pest --compact'
+        && $process->environment === ['APP_ENV' => false, 'DB_CONNECTION' => false, 'APP_NAME' => false]);
+
+    unlink($directory.'/.env');
+    rmdir($directory);
+});
+
+it('runs the suite with the inherited environment when the application has no .env file', function () {
+    $this->app->useEnvironmentPath(sys_get_temp_dir().'/claude-hooks-missing-'.uniqid());
+    Process::fake(['git status*' => Process::result(output: " M app/Money.php\n"), '*' => Process::result()]);
+
+    $this->runHook(Pest::class, StopInput::fake())->assertNoOpinion();
+
+    Process::assertRan(fn (PendingProcess $process) => $process->command === 'vendor/bin/pest --compact' && $process->environment === []);
+});
+
 it('is http-safe, since it runs the suite on disk whichever environment runs it', function () {
     expect(Pest::httpSafe())->toBeTrue();
 });

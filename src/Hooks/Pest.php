@@ -2,6 +2,8 @@
 
 namespace RobertoGallea\ClaudeHooks\Hooks;
 
+use Dotenv\Parser\Entry;
+use Dotenv\Parser\Parser;
 use Illuminate\Support\Facades\Process;
 use RobertoGallea\ClaudeHooks\Attributes\ClaudeHook;
 use RobertoGallea\ClaudeHooks\HookResponse;
@@ -13,7 +15,9 @@ use RobertoGallea\ClaudeHooks\Inputs\StopInput;
  * opinion. A failing one sends Claude back once, with the tail of the output as its next instruction; if the
  * suite still fails when Claude stops again (`stop_hook_active`), Claude may stop and the user is warned, since
  * a failure that needs a human decision cannot be fixed by sending Claude back. It is http-safe: it runs the
- * suite on disk, whichever environment runs it. Subclass it and override testCommand() to change the command.
+ * suite on disk, whichever environment runs it. Like `artisan test`, it runs the suite without the variables of
+ * the application's .env file, which the hook process loaded, so phpunit.xml can set the testing ones. Subclass it
+ * and override testCommand() to change the command.
  */
 #[ClaudeHook(timeout: 300)]
 class Pest extends ReadyMadeHook
@@ -35,7 +39,7 @@ class Pest extends ReadyMadeHook
             return null;
         }
 
-        $suite = Process::path($this->projectPath())->forever()->run($this->testCommand());
+        $suite = Process::path($this->projectPath())->env($this->withoutDotenv())->forever()->run($this->testCommand());
 
         if ($suite->successful()) {
             return null;
@@ -71,6 +75,25 @@ class Pest extends ReadyMadeHook
         $command = static::setting('command', 'vendor/bin/pest --compact');
 
         return $command;
+    }
+
+    /**
+     * Every variable named in the application's .env file, mapped to false so the suite's process does not inherit
+     * it: phpunit.xml does not override a variable that is already set. Without phpdotenv no .env file was loaded.
+     *
+     * @return array<string, false>
+     */
+    private function withoutDotenv(): array
+    {
+        $file = app()->environmentFilePath();
+
+        if (! class_exists(Parser::class) || ! is_file($file)) {
+            return [];
+        }
+
+        $names = array_map(fn (Entry $entry) => $entry->getName(), (new Parser)->parse((string) file_get_contents($file)));
+
+        return array_fill_keys($names, false);
     }
 
     /** The application's folder, where git and the test suite run. */
