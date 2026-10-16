@@ -2,7 +2,9 @@
 
 namespace RobertoGallea\ClaudeHooks;
 
+use Illuminate\Console\Application as Artisan;
 use Illuminate\Support\ServiceProvider;
+use RobertoGallea\ClaudeHooks\Hooks\ReadyMadeHook;
 
 class ClaudeHooksServiceProvider extends ServiceProvider
 {
@@ -19,6 +21,11 @@ class ClaudeHooksServiceProvider extends ServiceProvider
             ], 'claude-hooks-config');
 
             $this->commands([Console\InstallCommand::class]);
+
+            // Read when Artisan starts, so enabling a Ready-made Hook takes effect in the next Artisan process.
+            Artisan::starting(function (Artisan $artisan): void {
+                $artisan->resolveCommands(ReadyMadeHook::enabled());
+            });
         }
     }
 }

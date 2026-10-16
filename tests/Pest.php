@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Contracts\Console\Kernel;
 use RobertoGallea\ClaudeHooks\Inputs\HookInput;
 use RobertoGallea\ClaudeHooks\Inputs\PreToolUseInput;
 use RobertoGallea\ClaudeHooks\Testing\HookResult;
@@ -36,4 +37,15 @@ function seenBy(HookInput $input): HookInput
     })->assertNoOpinion();
 
     return $seen;
+}
+
+/**
+ * Enable a Ready-made Hook with this config, then start Artisan again, as a fresh process with that config would.
+ *
+ * @param  array<string, mixed>  $config
+ */
+function enableReadyMadeHook(string $name, array $config = []): void
+{
+    config(["claude-hooks.hooks.{$name}" => ['enabled' => true, ...$config]]);
+    app(Kernel::class)->setArtisan(null);
 }

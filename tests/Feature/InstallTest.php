@@ -372,3 +372,20 @@ it('writes two-space JSON with unescaped slashes and unicode, empty objects kept
           "hooks": {
         JSON)->toEndWith("}\n}\n");
 });
+
+it('writes an enabled Ready-made Hook with the matcher and timeout its config overrides', function () {
+    enableReadyMadeHook('guard-migrations', ['matchers' => ['Edit|Write' => 'Edit|Write|NotebookEdit'], 'timeout' => 10]);
+
+    $this->artisan('claude-hooks:install')->assertSuccessful();
+
+    expect(json_decode(settings(), true)['hooks'])->toBe([
+        'PreToolUse' => [
+            ['matcher' => 'Edit|Write|NotebookEdit', 'hooks' => [
+                ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" claude-hooks:guard-migrations', 'timeout' => 10],
+            ]],
+            ['matcher' => 'Bash', 'hooks' => [
+                ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" claude-hooks:guard-migrations', 'timeout' => 10],
+            ]],
+        ],
+    ]);
+});

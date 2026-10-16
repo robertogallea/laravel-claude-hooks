@@ -6,6 +6,7 @@ use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Foundation\Application;
 use ReflectionClass;
 use RobertoGallea\ClaudeHooks\Attributes\ClaudeHook;
+use RobertoGallea\ClaudeHooks\Hooks\ReadyMadeHook;
 use RobertoGallea\ClaudeHooks\Inputs\GenericInput;
 
 /** Derives Registrations from Hook Commands. */
@@ -47,10 +48,11 @@ final class Registrations
      */
     public function of(string $command): array
     {
-        $declared = array_map(
-            fn ($attribute) => $attribute->newInstance(),
-            (new ReflectionClass($command))->getAttributes(ClaudeHook::class),
-        ) ?: [new ClaudeHook];
+        $declared = $this->declared(new ReflectionClass($command)) ?: [new ClaudeHook];
+
+        if (is_subclass_of($command, ReadyMadeHook::class)) {
+            $declared = array_map($command::configured(...), $declared);
+        }
 
         /** @var HookCommand $instance */
         $instance = $this->app->make($command);
@@ -69,6 +71,21 @@ final class Registrations
             transport: $declared->transport,
             httpSafe: $command::httpSafe(),
         )), $declared);
+    }
+
+    /**
+     * The Registration attributes of the class, or of its nearest parent that declares some: PHP does not
+     * inherit attributes, and a subclass of a Hook Command, such as a Ready-made Hook, keeps its Registrations.
+     *
+     * @param  ReflectionClass<covariant object>  $class
+     * @return list<ClaudeHook>
+     */
+    private function declared(ReflectionClass $class): array
+    {
+        $attributes = array_map(fn ($attribute) => $attribute->newInstance(), $class->getAttributes(ClaudeHook::class));
+        $parent = $class->getParentClass();
+
+        return $attributes === [] && $parent !== false ? $this->declared($parent) : $attributes;
     }
 
     /**
