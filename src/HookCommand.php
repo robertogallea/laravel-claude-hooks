@@ -55,7 +55,7 @@ abstract class HookCommand extends Command
      */
     public static function inputClasses(): array
     {
-        $type = self::hookMethod()->getParameters()[0]?->getType();
+        $type = (self::hookMethod()->getParameters()[0] ?? null)?->getType();
         $types = match (true) {
             $type instanceof ReflectionNamedType => [$type],
             $type instanceof ReflectionUnionType => $type->getTypes(),
@@ -85,8 +85,10 @@ abstract class HookCommand extends Command
     private function answer(HookInput $input): ?HookResponse
     {
         $parameter = self::hookMethod()->getParameters()[0]->getName();
+        $handler = [$this, 'hook'];
+        assert(is_callable($handler));
 
-        return $this->laravel->call([$this, 'hook'], [$parameter => $input]);
+        return $this->laravel->call($handler, [$parameter => $input]);
     }
 
     /**
@@ -99,6 +101,7 @@ abstract class HookCommand extends Command
     private function payload(): ?array
     {
         $source = $this->option('payload');
+        $source = is_string($source) ? $source : null;
 
         if ($source === null && stream_isatty(STDIN)) {
             return null;
@@ -108,6 +111,10 @@ abstract class HookCommand extends Command
             ? stream_get_contents(STDIN)
             : file_get_contents($source);
 
-        return json_decode(trim((string) $json) ?: '{}', true, flags: JSON_THROW_ON_ERROR);
+        try {
+            return json_decode(trim((string) $json) ?: '{}', true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new JsonException("The hook payload is not valid JSON: {$e->getMessage()}.", $e->getCode(), $e);
+        }
     }
 }

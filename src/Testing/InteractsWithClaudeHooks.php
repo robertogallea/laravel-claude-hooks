@@ -3,6 +3,8 @@
 namespace RobertoGallea\ClaudeHooks\Testing;
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use LogicException;
 use RobertoGallea\ClaudeHooks\HookCommand;
 use RobertoGallea\ClaudeHooks\Inputs\HookInput;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -17,8 +19,10 @@ trait InteractsWithClaudeHooks
      */
     public function runHook(string $command, HookInput $input): HookResult
     {
-        $kernel = $this->app->make(Kernel::class);
-        $hook = $this->app->make($command);
+        $app = $this->app ?? throw new LogicException('runHook() needs the application: call it from inside a test.');
+        /** @var ConsoleKernel $kernel */
+        $kernel = $app->make(Kernel::class);
+        $hook = $app->make($command);
         $kernel->registerCommand($hook);
 
         $file = tempnam(sys_get_temp_dir(), 'claude-hook-');

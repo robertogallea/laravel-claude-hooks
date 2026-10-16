@@ -1,0 +1,3 @@
+providers:
+  - RobertoGallea\ClaudeHooks\ClaudeHooksServiceProvider
+  - RobertoGallea\ClaudeHooks\Tests\Fixtures\FixturesServiceProvider

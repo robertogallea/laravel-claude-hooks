@@ -65,7 +65,11 @@ abstract class HookInput
         return $this->get('permission_mode');
     }
 
-    /** A copy with the given payload fields replaced. */
+    /**
+     * A copy with the given payload fields replaced.
+     *
+     * @param  array<string, mixed>  $fields
+     */
     public function with(array $fields): static
     {
         return new static(array_replace($this->payload, $fields));

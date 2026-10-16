@@ -3,6 +3,7 @@
 namespace RobertoGallea\ClaudeHooks\Tests\Fixtures;
 
 use Closure;
+use LogicException;
 use RobertoGallea\ClaudeHooks\HookCommand;
 use RobertoGallea\ClaudeHooks\HookResponse;
 use RobertoGallea\ClaudeHooks\Inputs\PreToolUseInput;
@@ -17,6 +18,8 @@ class ScriptedPreToolUse extends HookCommand
 
     public function hook(PreToolUseInput $input): ?HookResponse
     {
-        return (self::$answer)($input);
+        $answer = self::$answer ?? throw new LogicException('Script an answer before running the hook.');
+
+        return $answer($input);
     }
 }
