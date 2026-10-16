@@ -116,3 +116,14 @@ it('answers with an enabled Ready-made Hook', function () {
         ->assertOk()
         ->assertContent('');
 });
+
+it('answers 404 for a Hook Command that is not http-safe, even with an http entry written by hand', function () {
+    enableReadyMadeHook('guard-artisan');
+    serveHttp();
+
+    $this->postJson('/claude-hooks/claude-hooks:guard-artisan', PreToolUseInput::fake()->bash('php artisan migrate:fresh')->payload, bearer())
+        ->assertNotFound()
+        ->assertExactJson([
+            'message' => 'claude-hooks:guard-artisan is command-only: its answer depends on Claude Code\'s environment, so it is not served over http.',
+        ]);
+});
