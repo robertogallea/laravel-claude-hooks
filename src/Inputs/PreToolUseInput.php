@@ -41,7 +41,12 @@ class PreToolUseInput extends HookInput
         return $this->respond()->with(decision: Decision::Ask, reason: $reason);
     }
 
-    /** Leave the decision to the rest of the permission flow, with a reason for it. */
+    /**
+     * Pause at the tool call without running it: Claude Code exits gracefully so the tool can be resumed later,
+     * for a process that runs `claude -p` and collects input in its own interface. Claude Code honours it only in
+     * `-p` mode and only when Claude makes a single tool call in the turn; otherwise it warns and ignores it, and
+     * the call goes through the normal permission flow. Claude Code ignores the reason.
+     */
     public function defer(?string $reason = null): FullResponse
     {
         return $this->respond()->with(decision: Decision::Defer, reason: $reason);

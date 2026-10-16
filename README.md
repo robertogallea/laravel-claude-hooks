@@ -86,6 +86,8 @@ When Claude denies an edit, it reads the reason and acts on it, so write the rea
 | `NotificationInput`, `SessionEndInput` | none: Claude Code discards their output, so use them for side effects |
 | `GenericInput` | none: every other Hook Event, including ones added by later Claude Code releases |
 
+`defer()` pauses at the tool call without running it: Claude Code exits gracefully so the tool can be resumed later, for a process that runs `claude -p` and answers in its own interface. Claude Code honours it only in `-p` mode with a single tool call in the turn; otherwise it ignores it and the normal permission flow continues.
+
 Every Hook Input in the table that has helpers, except `PreCompactInput`, also has `systemMessage(message)`, a warning shown to the user, and `stopSession(reason)`, which stops Claude entirely. A response chains them too: `$input->deny($reason)->withSystemMessage('Blocked an edit to lang/it.')`. `$response->and($other)` combines two responses for the same Hook Event.
 
 On a `Stop` hook, check `$input->stopHookActive()` before blocking: it is true when Claude is already continuing because a stop hook blocked it, and a hook that blocks every time keeps Claude in a loop. `SessionEnd` hooks share a default budget of 1.5 seconds, which a Hook Command fits, but leave the slow work elsewhere.

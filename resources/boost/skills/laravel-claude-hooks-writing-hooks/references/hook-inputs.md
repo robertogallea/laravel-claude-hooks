@@ -6,7 +6,7 @@ All classes are in `RobertoGallea\ClaudeHooks\Inputs`. Every helper returns a Ho
 
 | Hook Input | Helpers |
 | --- | --- |
-| `PreToolUseInput` | `allow(?reason, ?updatedInput)`, `deny(reason)`, `ask(?reason)`, `defer(?reason)`, `updateInput(input)`, `addContext(context)` |
+| `PreToolUseInput` | `allow(?reason, ?updatedInput)`, `deny(reason)`, `ask(?reason)`, `defer(?reason)` (exits gracefully so the tool can be resumed later; honoured only in `-p` mode with a single tool call), `updateInput(input)`, `addContext(context)` |
 | `PermissionRequestInput` | `allow(?updatedInput, ?updatedPermissions)`, `deny(?message, interrupt: false)` |
 | `PostToolUseInput` | `block(?reason)` (adds the reason next to the result; the tool already ran), `addContext(context)`, `replaceOutput(output)` |
 | `PostToolUseFailureInput` | `addContext(context)` |
