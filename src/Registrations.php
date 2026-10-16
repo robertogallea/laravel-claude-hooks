@@ -2,6 +2,7 @@
 
 namespace RobertoGallea\ClaudeHooks;
 
+use Closure;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Foundation\Application;
 use ReflectionClass;
@@ -39,6 +40,29 @@ final class Registrations
     }
 
     /**
+     * The Registrations of every discovered Hook Command, and every one that is invalid, rather than only the
+     * first: what doctor reports.
+     *
+     * @return array{valid: list<Registration>, invalid: list<InvalidRegistration>}
+     */
+    public function checked(): array
+    {
+        $valid = $invalid = [];
+
+        foreach ($this->commands() as $command) {
+            foreach ($this->resolvers($command) as $resolve) {
+                try {
+                    $valid[] = $resolve();
+                } catch (InvalidRegistration $e) {
+                    $invalid[] = $e;
+                }
+            }
+        }
+
+        return ['valid' => $valid, 'invalid' => $invalid];
+    }
+
+    /**
      * The Registrations a Hook Command declares, with their Hook Events resolved.
      *
      * @param  class-string<HookCommand>  $command
@@ -47,6 +71,17 @@ final class Registrations
      * @throws InvalidRegistration
      */
     public function of(string $command): array
+    {
+        return array_map(fn (Closure $resolve) => $resolve(), $this->resolvers($command));
+    }
+
+    /**
+     * One closure per Registration the Hook Command declares, resolving it or throwing when it is invalid.
+     *
+     * @param  class-string<HookCommand>  $command
+     * @return list<Closure(): Registration>
+     */
+    private function resolvers(string $command): array
     {
         $declared = $this->declared(new ReflectionClass($command)) ?: [new ClaudeHook];
 
@@ -57,7 +92,7 @@ final class Registrations
         /** @var HookCommand $instance */
         $instance = $this->app->make($command);
 
-        return array_map(fn (ClaudeHook $declared) => $this->validated(new Registration(
+        return array_map(fn (ClaudeHook $declared) => fn () => $this->validated(new Registration(
             command: $command,
             signature: (string) $instance->getName(),
             event: $this->event($command, $declared),

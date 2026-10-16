@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\File;
 use RobertoGallea\ClaudeHooks\Attributes\ClaudeHook;
 use RobertoGallea\ClaudeHooks\HookCommand;
@@ -54,25 +53,6 @@ beforeEach(function () {
 afterEach(function () {
     File::deleteDirectory($this->project);
 });
-
-/** @param  class-string<HookCommand>  ...$commands */
-function hookCommands(string ...$commands): void
-{
-    foreach ($commands as $command) {
-        app(Kernel::class)->registerCommand(app($command));
-    }
-}
-
-function settings(string $file = 'settings.json'): string
-{
-    return file_get_contents(test()->project."/.claude/{$file}");
-}
-
-function givenSettings(string $json, string $file = 'settings.json'): void
-{
-    File::ensureDirectoryExists(test()->project.'/.claude');
-    file_put_contents(test()->project."/.claude/{$file}", $json);
-}
 
 it('creates the .claude folder and settings file with a Managed Entry for each Registration', function () {
     $this->artisan('claude-hooks:install')

@@ -47,6 +47,11 @@ class Pint extends ReadyMadeHook
         return $input->addContext("Pint could not format {$file} (exit code {$result->exitCode()})".($output === '' ? '.' : ":\n{$output}"));
     }
 
+    public function requiredBinaries(): array
+    {
+        return [$this->binary()];
+    }
+
     /** The Pint binary: the configured one, else vendor/bin/pint under the project path. */
     protected function binary(): string
     {

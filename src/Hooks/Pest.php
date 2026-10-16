@@ -52,6 +52,18 @@ class Pest extends ReadyMadeHook
         return $input->block("The test suite is failing. Fix it before you finish:\n".implode("\n", array_slice($lines, -$tail)));
     }
 
+    /** The first word of the test command when it is a path, such as vendor/bin/pest, resolved from the project path. */
+    public function requiredBinaries(): array
+    {
+        $binary = strtok($this->testCommand(), ' ');
+
+        if ($binary === false || ! str_contains($binary, '/')) {
+            return [];
+        }
+
+        return [str_starts_with($binary, '/') ? $binary : $this->projectPath().'/'.$binary];
+    }
+
     /** The command that runs the test suite. */
     protected function testCommand(): string
     {

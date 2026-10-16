@@ -24,6 +24,17 @@ abstract class ReadyMadeHook extends HookCommand
     abstract public static function name(): string;
 
     /**
+     * The binaries this hook runs, as absolute paths, which doctor checks for. Commands it finds on the PATH are
+     * not listed.
+     *
+     * @return list<string>
+     */
+    public function requiredBinaries(): array
+    {
+        return [];
+    }
+
+    /**
      * The Ready-made Hooks enabled in config.
      *
      * @return list<class-string<ReadyMadeHook>>

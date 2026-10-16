@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\File;
+use RobertoGallea\ClaudeHooks\HookCommand;
 use RobertoGallea\ClaudeHooks\Inputs\HookInput;
 use RobertoGallea\ClaudeHooks\Inputs\PreToolUseInput;
 use RobertoGallea\ClaudeHooks\Testing\HookResult;
@@ -48,4 +50,23 @@ function enableReadyMadeHook(string $name, array $config = []): void
 {
     config(["claude-hooks.hooks.{$name}" => ['enabled' => true, ...$config]]);
     app(Kernel::class)->setArtisan(null);
+}
+
+/** @param  class-string<HookCommand>  ...$commands */
+function hookCommands(string ...$commands): void
+{
+    foreach ($commands as $command) {
+        app(Kernel::class)->registerCommand(app($command));
+    }
+}
+
+function settings(string $file = 'settings.json'): string
+{
+    return file_get_contents(test()->project."/.claude/{$file}");
+}
+
+function givenSettings(string $json, string $file = 'settings.json'): void
+{
+    File::ensureDirectoryExists(test()->project.'/.claude');
+    file_put_contents(test()->project."/.claude/{$file}", $json);
 }

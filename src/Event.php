@@ -92,6 +92,15 @@ enum Event: string
     }
 
     /**
+     * Whether a hook on this event decides whether an action happens: a tool call, a permission, a prompt. When such
+     * a hook cannot be reached and fails open, the action goes ahead unchecked.
+     */
+    public function guardsAnAction(): bool
+    {
+        return in_array($this, [self::PreToolUse, self::PermissionRequest, self::UserPromptSubmit], true);
+    }
+
+    /**
      * The tool events, the only ones that evaluate `if`.
      *
      * @return list<self>
