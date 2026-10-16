@@ -20,6 +20,12 @@ use RobertoGallea\ClaudeHooks\Transport;
  */
 final class ClaudeCode
 {
+    /** The path, under the application's URL, of the route the http Transport posts to. */
+    public const HTTP_PATH = 'claude-hooks';
+
+    /** The environment variable from which Claude Code sends the http Transport's bearer token. */
+    private const HTTP_TOKEN = 'CLAUDE_HOOKS_TOKEN';
+
     /**
      * The Hook Input for a payload, among the Hook Input classes a handler accepts.
      *
@@ -94,19 +100,25 @@ final class ClaudeCode
     /**
      * The hook handler of a Registration's Settings Entry, with only the fields that differ from Claude Code's defaults.
      *
+     * @param  string|null  $httpUrl  the application's base URL, which a Registration on the http Transport needs
      * @return array<string, mixed>
      *
      * @throws InvalidRegistration
      */
-    public function handler(Registration $registration): array
+    public function handler(Registration $registration, ?string $httpUrl = null): array
     {
-        if ($registration->transport === Transport::Http) {
-            throw new InvalidRegistration("{$registration->command} uses the http Transport, which install cannot write yet: use the command Transport.");
-        }
-
-        return $this->withoutNulls([
+        $transport = $registration->transport === Transport::Http ? [
+            'type' => 'http',
+            'url' => rtrim($httpUrl ?? throw new InvalidRegistration("{$registration->command} uses the http Transport, which needs the application's URL: pass --http=<base-url> or set claude-hooks.http.url."), '/')
+                .'/'.self::HTTP_PATH.'/'.$registration->signature,
+            'headers' => ['Authorization' => 'Bearer $'.self::HTTP_TOKEN],
+            'allowedEnvVars' => [self::HTTP_TOKEN],
+        ] : [
             'type' => 'command',
             'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" '.$registration->signature,
+        ];
+
+        return $this->withoutNulls($transport + [
             'if' => $registration->if,
             'timeout' => $registration->timeout,
             'statusMessage' => $registration->statusMessage,
@@ -117,17 +129,24 @@ final class ClaudeCode
     }
 
     /**
-     * The signature of the Hook Command a hook handler runs, when it is the handler of a Managed Entry; null when the
-     * handler belongs to the user.
+     * The signature of the Hook Command a hook handler runs, when it is the handler of a Managed Entry: the command
+     * Transport's Artisan command or the http Transport's package route. Null when the handler belongs to the user.
      *
      * @param  array<array-key, mixed>  $handler
      */
     public function managedSignature(array $handler): ?string
     {
         $command = $handler['command'] ?? null;
+        $url = $handler['url'] ?? null;
 
         if (($handler['type'] ?? null) === 'command' && is_string($command)
             && preg_match('/\Aphp "\$CLAUDE_PROJECT_DIR\/artisan" (\S+)\z/', $command, $matches) === 1) {
+            return $matches[1];
+        }
+
+        // Whatever the application's URL, a URL whose last segment follows the package route's path.
+        if (($handler['type'] ?? null) === 'http' && is_string($url)
+            && preg_match('#\Ahttps?://\S*/'.self::HTTP_PATH.'/([^/?\#\s]+)\z#', $url, $matches) === 1) {
             return $matches[1];
         }
 

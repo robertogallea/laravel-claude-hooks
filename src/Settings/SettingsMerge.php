@@ -20,17 +20,18 @@ final class SettingsMerge
      * @param  array<string, mixed>  $settings
      * @param  list<Registration>  $registrations
      * @param  bool  $prune  remove the Managed Entries no Registration matches
+     * @param  string|null  $httpUrl  the application's base URL, for Registrations on the http Transport
      *
      * @throws InvalidRegistration
      */
-    public function merge(array $settings, array $registrations, bool $prune = false): MergedSettings
+    public function merge(array $settings, array $registrations, bool $prune = false, ?string $httpUrl = null): MergedSettings
     {
         /** @var array<string, mixed> $hooks */
         $hooks = is_array($settings['hooks'] ?? null) ? $settings['hooks'] : [];
         $existing = $this->managedHandlers($hooks);
         $wanted = array_map(fn (Registration $registration) => [
             'entry' => ManagedEntry::for($registration),
-            'handler' => $this->wire->handler($registration),
+            'handler' => $this->wire->handler($registration, $httpUrl),
         ], $registrations);
         $pairs = $this->pair(array_column($wanted, 'entry'), array_column($existing, 'entry'));
 

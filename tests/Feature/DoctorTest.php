@@ -159,8 +159,9 @@ it('reports every invalid Registration, not just the first, and still checks the
 });
 
 it('warns about an http guard that fails open, and still succeeds', function () {
-    $this->artisan('claude-hooks:install')->assertSuccessful();
+    config(['claude-hooks.http.url' => 'http://app.test']);
     hookCommands(DoctorGuardsOverHttp::class);
+    $this->artisan('claude-hooks:install')->assertSuccessful();
 
     $this->artisan('claude-hooks:doctor')
         ->expectsOutputToContain("PreToolUse doctor:guards-over-http on 'Bash' uses the http Transport without failClosed")
@@ -169,12 +170,54 @@ it('warns about an http guard that fails open, and still succeeds', function () 
 });
 
 it('does not warn about an http guard that fails closed, nor about an http hook that guards nothing', function () {
-    $this->artisan('claude-hooks:install')->assertSuccessful();
+    config(['claude-hooks.http.url' => 'http://app.test']);
     hookCommands(DoctorGuardsOverHttpFailingClosed::class, DoctorFormatsOverHttp::class);
+    $this->artisan('claude-hooks:install')->assertSuccessful();
 
     $this->artisan('claude-hooks:doctor')
         ->expectsOutputToContain('OK: .claude/settings.json calls every Hook Command as declared.')
         ->assertSuccessful();
+});
+
+it('checks the http handler of a Registration on the http Transport', function () {
+    config(['claude-hooks.http.url' => 'http://app.test']);
+    hookCommands(DoctorFormatsOverHttp::class);
+
+    $this->artisan('claude-hooks:doctor')
+        ->expectsOutputToContain("Missing from .claude/settings.json: PostToolUse doctor:formats-over-http on 'Edit'")
+        ->assertFailed();
+
+    $this->artisan('claude-hooks:install')->assertSuccessful();
+    expect(settings())->toContain('"url": "http://app.test/claude-hooks/doctor:formats-over-http"');
+
+    $this->artisan('claude-hooks:doctor')
+        ->expectsOutputToContain('OK: .claude/settings.json calls every Hook Command as declared.')
+        ->assertSuccessful();
+
+    givenSettings(str_replace('http://app.test/', 'http://elsewhere.test/', settings()));
+
+    $this->artisan('claude-hooks:doctor')
+        ->expectsOutputToContain("Outdated in .claude/settings.json: PostToolUse doctor:formats-over-http on 'Edit'")
+        ->assertFailed();
+});
+
+it('checks settings that install --http wrote when given the same --http', function () {
+    $this->artisan('claude-hooks:install', ['--http' => 'http://app.test'])->assertSuccessful();
+
+    $this->artisan('claude-hooks:doctor', ['--http' => 'http://app.test'])
+        ->doesntExpectOutputToContain('settings.json:')
+        ->assertSuccessful();
+    $this->artisan('claude-hooks:doctor')
+        ->expectsOutputToContain('Outdated in .claude/settings.json: PreToolUse fixture:guard-env-files')
+        ->assertFailed();
+});
+
+it('warns about an http-safe guard that --http switches to fail open', function () {
+    hookCommands(DoctorGuardsBash::class);
+
+    $this->artisan('claude-hooks:doctor', ['--http' => 'http://app.test'])
+        ->expectsOutputToContain("PreToolUse doctor:guard-bash on 'Bash' uses the http Transport without failClosed")
+        ->assertFailed();
 });
 
 /** An executable file under the project, as a Composer binary would be. */

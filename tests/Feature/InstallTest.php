@@ -8,6 +8,7 @@ use RobertoGallea\ClaudeHooks\Inputs\PostToolUseInput;
 use RobertoGallea\ClaudeHooks\Inputs\PreToolUseInput;
 use RobertoGallea\ClaudeHooks\Inputs\StopInput;
 use RobertoGallea\ClaudeHooks\Tests\Fixtures\GuardEnvFiles;
+use RobertoGallea\ClaudeHooks\Transport;
 
 #[ClaudeHook(matcher: 'Bash', if: 'Bash(php artisan *)', timeout: 30, statusMessage: 'Checking the command', failClosed: true)]
 class InstallGuardsArtisan extends HookCommand
@@ -38,6 +39,33 @@ class InstallFiltersStopWithIf extends HookCommand
     protected $signature = 'install:filters-stop-with-if';
 
     public function hook(StopInput $input): ?HookResponse
+    {
+        return null;
+    }
+}
+
+#[ClaudeHook(matcher: 'Edit', if: 'Edit(*.php)', timeout: 20, statusMessage: 'Formatting', transport: Transport::Http)]
+class InstallFormatsOverHttp extends HookCommand
+{
+    protected $signature = 'install:formats-over-http';
+
+    public function hook(PostToolUseInput $input): ?HookResponse
+    {
+        return null;
+    }
+}
+
+#[ClaudeHook(matcher: 'Bash', failClosed: true)]
+class InstallReadsClaudesDatabase extends HookCommand
+{
+    protected $signature = 'install:reads-claudes-database';
+
+    public static function httpSafe(): bool
+    {
+        return false;
+    }
+
+    public function hook(PreToolUseInput $input): ?HookResponse
     {
         return null;
     }
@@ -426,4 +454,129 @@ it('writes the Ready-made pest for Stop without a matcher, with a timeout of 300
             ]],
         ],
     ]);
+});
+
+it('writes an http handler that sends the token for a Registration on the http Transport', function () {
+    config(['claude-hooks.http.url' => 'http://localhost:8000/']);
+    hookCommands(InstallFormatsOverHttp::class);
+
+    $this->artisan('claude-hooks:install')
+        ->expectsOutputToContain("+ PostToolUse install:formats-over-http on 'Edit' if 'Edit(*.php)'")
+        ->assertSuccessful();
+
+    expect(json_decode(settings(), true)['hooks']['PostToolUse'])->toBe([
+        ['matcher' => 'Edit', 'hooks' => [[
+            'type' => 'http',
+            'url' => 'http://localhost:8000/claude-hooks/install:formats-over-http',
+            'headers' => ['Authorization' => 'Bearer $CLAUDE_HOOKS_TOKEN'],
+            'allowedEnvVars' => ['CLAUDE_HOOKS_TOKEN'],
+            'if' => 'Edit(*.php)',
+            'timeout' => 20,
+            'statusMessage' => 'Formatting',
+        ]]],
+    ]);
+});
+
+it('switches every http-safe Registration to the http Transport with --http, and says which ones stay on command', function () {
+    config(['claude-hooks.http.url' => 'http://ignored.test']);
+    hookCommands(InstallReadsClaudesDatabase::class, InstallFormatsOverHttp::class);
+
+    $this->artisan('claude-hooks:install', ['--http' => 'http://app.test'])
+        ->expectsOutputToContain('install:reads-claudes-database is not http-safe: it stays on the command Transport.')
+        ->assertSuccessful();
+
+    expect(json_decode(settings(), true)['hooks'])->toBe([
+        'PreToolUse' => [
+            ['hooks' => [[
+                'type' => 'http',
+                'url' => 'http://app.test/claude-hooks/fixture:guard-env-files',
+                'headers' => ['Authorization' => 'Bearer $CLAUDE_HOOKS_TOKEN'],
+                'allowedEnvVars' => ['CLAUDE_HOOKS_TOKEN'],
+            ]]],
+            ['matcher' => 'Bash', 'hooks' => [[
+                'type' => 'command',
+                'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" install:reads-claudes-database',
+                'onFailure' => 'block',
+            ]]],
+        ],
+        'PostToolUse' => [
+            ['matcher' => 'Edit', 'hooks' => [[
+                'type' => 'http',
+                'url' => 'http://app.test/claude-hooks/install:formats-over-http',
+                'headers' => ['Authorization' => 'Bearer $CLAUDE_HOOKS_TOKEN'],
+                'allowedEnvVars' => ['CLAUDE_HOOKS_TOKEN'],
+                'if' => 'Edit(*.php)',
+                'timeout' => 20,
+                'statusMessage' => 'Formatting',
+            ]]],
+        ],
+    ]);
+});
+
+it('says nothing about http-safety without --http', function () {
+    hookCommands(InstallReadsClaudesDatabase::class);
+
+    $this->artisan('claude-hooks:install')
+        ->doesntExpectOutputToContain('not http-safe')
+        ->assertSuccessful();
+});
+
+it('updates the Managed Entry in place when its Transport switches, both ways', function () {
+    $this->artisan('claude-hooks:install')->assertSuccessful();
+
+    $this->artisan('claude-hooks:install', ['--http' => 'http://app.test'])
+        ->expectsOutputToContain('~ PreToolUse fixture:guard-env-files')
+        ->assertSuccessful();
+    expect(json_decode(settings(), true)['hooks']['PreToolUse'])->toBe([
+        ['hooks' => [[
+            'type' => 'http',
+            'url' => 'http://app.test/claude-hooks/fixture:guard-env-files',
+            'headers' => ['Authorization' => 'Bearer $CLAUDE_HOOKS_TOKEN'],
+            'allowedEnvVars' => ['CLAUDE_HOOKS_TOKEN'],
+        ]]],
+    ]);
+
+    $this->artisan('claude-hooks:install')
+        ->expectsOutputToContain('~ PreToolUse fixture:guard-env-files')
+        ->assertSuccessful();
+    expect(json_decode(settings(), true)['hooks']['PreToolUse'])->toBe([
+        ['hooks' => [['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" fixture:guard-env-files']]],
+    ]);
+});
+
+it('recognises an http handler under the package route as a Managed Entry, and no other http handler', function () {
+    givenSettings(<<<'JSON'
+        {
+          "hooks": {
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {"type": "http", "url": "http://app.test/claude-hooks/fixture:removed-hook"},
+                  {"type": "http", "url": "http://localhost:9000/audit"},
+                  {"type": "http", "url": "http://app.test/claude-hooks/a/b"}
+                ]
+              }
+            ]
+          }
+        }
+        JSON);
+
+    $this->artisan('claude-hooks:install', ['--prune' => true])
+        ->expectsOutputToContain('- PreToolUse fixture:removed-hook')
+        ->assertSuccessful();
+
+    expect(json_decode(settings(), true)['hooks']['PreToolUse'][0]['hooks'])->toBe([
+        ['type' => 'http', 'url' => 'http://localhost:9000/audit'],
+        ['type' => 'http', 'url' => 'http://app.test/claude-hooks/a/b'],
+    ]);
+});
+
+it('stops when a Registration on the http Transport has no URL to post to', function () {
+    hookCommands(InstallFormatsOverHttp::class);
+
+    $this->artisan('claude-hooks:install')
+        ->expectsOutputToContain("uses the http Transport, which needs the application's URL: pass --http=<base-url> or set claude-hooks.http.url.")
+        ->assertFailed();
+
+    expect(file_exists("{$this->project}/.claude/settings.json"))->toBeFalse();
 });

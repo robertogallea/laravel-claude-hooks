@@ -38,14 +38,30 @@ abstract class HookCommand extends Command
             return self::FAILURE;
         }
 
-        $response = $this->answer($wire->decode($payload, static::inputClasses()));
+        $response = $this->respond($payload, $wire);
 
         if ($response !== null) {
             $flags = JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR | ($this->option('pretty') ? JSON_PRETTY_PRINT : 0);
-            $this->output->writeln(json_encode($wire->encode($response), $flags), OutputInterface::OUTPUT_RAW);
+            $this->output->writeln(json_encode($response, $flags), OutputInterface::OUTPUT_RAW);
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * What both Transports do with a payload: decode it into a Hook Input, call `hook()`, and encode its Hook
+     * Response, or null for no opinion. Exceptions from the handler are not caught.
+     *
+     * @internal
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>|null
+     */
+    final public function respond(array $payload, ClaudeCode $wire): ?array
+    {
+        $response = $this->answer($wire->decode($payload, static::inputClasses()));
+
+        return $response === null ? null : $wire->encode($response);
     }
 
     /**

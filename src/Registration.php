@@ -26,4 +26,13 @@ final readonly class Registration
         public Transport $transport,
         public bool $httpSafe,
     ) {}
+
+    /** This Registration on the http Transport. */
+    public function overHttp(): self
+    {
+        return new self(
+            $this->command, $this->signature, $this->event, $this->matcher, $this->if, $this->timeout,
+            $this->statusMessage, $this->async, $this->asyncRewake, $this->failClosed, Transport::Http, $this->httpSafe,
+        );
+    }
 }

@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use RobertoGallea\ClaudeHooks\InvalidRegistration;
 use RobertoGallea\ClaudeHooks\ManagedEntry;
+use RobertoGallea\ClaudeHooks\Registration;
 use RobertoGallea\ClaudeHooks\Registrations;
 use RobertoGallea\ClaudeHooks\Settings\SettingsFile;
 use RobertoGallea\ClaudeHooks\Settings\SettingsMerge;
@@ -17,7 +18,8 @@ class InstallCommand extends Command
     protected $signature = 'claude-hooks:install
         {--local : Write to .claude/settings.local.json, which stays out of the repository}
         {--dry-run : Show what would change and write nothing}
-        {--prune : Remove Managed Entries that no Registration matches any more}';
+        {--prune : Remove Managed Entries that no Registration matches any more}
+        {--http= : Switch every http-safe Registration to the http Transport, at this base URL of the running application}';
 
     protected $description = 'Write the Settings Entries of every Hook Command into .claude/settings.json';
 
@@ -27,7 +29,7 @@ class InstallCommand extends Command
         $path = rtrim((string) (config('claude-hooks.project_path') ?? base_path()), '/').'/'.$relative;
 
         try {
-            $merged = $merge->merge(SettingsFile::read($path), $registrations->all(), (bool) $this->option('prune'));
+            $merged = $merge->merge(SettingsFile::read($path), $this->transported($registrations->all()), (bool) $this->option('prune'), $this->httpUrl());
         } catch (InvalidRegistration|RuntimeException $e) {
             $this->components->error($e->getMessage());
 
@@ -50,6 +52,35 @@ class InstallCommand extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The Registrations on the Transport they will use: with --http, every http-safe one on http.
+     *
+     * @param  list<Registration>  $registrations
+     * @return list<Registration>
+     */
+    private function transported(array $registrations): array
+    {
+        if ($this->option('http') === null) {
+            return $registrations;
+        }
+
+        $unsafe = array_filter($registrations, fn (Registration $registration) => ! $registration->httpSafe);
+
+        foreach (array_unique(array_map(fn (Registration $registration) => $registration->signature, $unsafe)) as $signature) {
+            $this->components->warn("{$signature} is not http-safe: it stays on the command Transport.");
+        }
+
+        return array_map(fn (Registration $registration) => $registration->httpSafe ? $registration->overHttp() : $registration, $registrations);
+    }
+
+    /** The application's base URL for Registrations on the http Transport: the one --http gives, or the configured one. */
+    private function httpUrl(): ?string
+    {
+        $url = $this->option('http') ?? config('claude-hooks.http.url');
+
+        return is_string($url) && $url !== '' ? $url : null;
     }
 
     /** @param  list<ManagedEntry>  $entries */

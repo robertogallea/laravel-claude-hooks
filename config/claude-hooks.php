@@ -81,6 +81,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | http Transport
+    |--------------------------------------------------------------------------
+    |
+    | Lets Claude Code POST hooks to the application while it is already
+    | running (Sail, Herd, `artisan serve`), so frequent hooks do not boot
+    | Laravel each time. The route POST /claude-hooks/{signature} exists only
+    | when `enabled` is true and the environment is local, and it answers only
+    | requests that carry `token` as a bearer token: install writes handlers
+    | that send $CLAUDE_HOOKS_TOKEN from Claude Code's environment, so set it
+    | to the same value there. `url` is the application's base URL, used for
+    | Registrations on the http Transport; `install --http=<base-url>` uses
+    | its own. The server answers with its own environment, not Claude Code's,
+    | so Hook Commands that are not http-safe always stay on the command
+    | Transport.
+    |
+    */
+
+    'http' => [
+        'enabled' => false,
+        'url' => null,
+        'token' => env('CLAUDE_HOOKS_TOKEN'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Project Path
     |--------------------------------------------------------------------------
     |

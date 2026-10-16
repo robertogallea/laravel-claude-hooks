@@ -4,6 +4,7 @@ namespace RobertoGallea\ClaudeHooks\Console;
 
 use Illuminate\Console\Command;
 use RobertoGallea\ClaudeHooks\Hooks\ReadyMadeHook;
+use RobertoGallea\ClaudeHooks\InvalidRegistration;
 use RobertoGallea\ClaudeHooks\ManagedEntry;
 use RobertoGallea\ClaudeHooks\Registration;
 use RobertoGallea\ClaudeHooks\Registrations;
@@ -19,7 +20,8 @@ use RuntimeException;
 class DoctorCommand extends Command
 {
     protected $signature = 'claude-hooks:doctor
-        {--local : Check .claude/settings.local.json, which stays out of the repository}';
+        {--local : Check .claude/settings.local.json, which stays out of the repository}
+        {--http= : Check the settings install --http writes at this base URL}';
 
     protected $description = 'Check that .claude/settings.json calls every Hook Command as declared';
 
@@ -40,6 +42,10 @@ class DoctorCommand extends Command
 
         ['valid' => $valid, 'invalid' => $invalid] = $registrations->checked();
 
+        if ($this->option('http') !== null) {
+            $valid = array_map(fn (Registration $registration) => $registration->httpSafe ? $registration->overHttp() : $registration, $valid);
+        }
+
         foreach ($invalid as $e) {
             $this->errors[] = $e->getMessage();
         }
@@ -57,8 +63,7 @@ class DoctorCommand extends Command
             }
         }
 
-        // Install cannot write http handlers yet (ticket 07), so only command Registrations are checked against settings.
-        $this->checkSettings($relative, $path, array_values(array_filter($valid, fn (Registration $registration) => $registration->transport === Transport::Command)), $merge);
+        $this->checkSettings($relative, $path, $valid, $merge);
 
         foreach ($this->errors as $error) {
             $this->components->error($error);
@@ -79,6 +84,14 @@ class DoctorCommand extends Command
         return $this->errors === [] ? self::SUCCESS : self::FAILURE;
     }
 
+    /** The application's base URL for Registrations on the http Transport, as install takes it. */
+    private function httpUrl(): ?string
+    {
+        $url = $this->option('http') ?? config('claude-hooks.http.url');
+
+        return is_string($url) && $url !== '' ? $url : null;
+    }
+
     /** The binaries an enabled Ready-made Hook runs, which would make it fail open on every call if missing. */
     private function checkBinaries(ReadyMadeHook $hook): void
     {
@@ -97,8 +110,8 @@ class DoctorCommand extends Command
     private function checkSettings(string $relative, string $path, array $registrations, SettingsMerge $merge): void
     {
         try {
-            $merged = $merge->merge(SettingsFile::read($path), $registrations);
-        } catch (RuntimeException $e) {
+            $merged = $merge->merge(SettingsFile::read($path), $registrations, httpUrl: $this->httpUrl());
+        } catch (InvalidRegistration|RuntimeException $e) {
             $this->errors[] = $e->getMessage();
 
             return;
