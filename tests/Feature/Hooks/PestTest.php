@@ -72,6 +72,16 @@ it('sends back as many lines of the output as configured', function () {
     ]);
 });
 
+it('sends back the output without its terminal colours', function () {
+    enableReadyMadeHook('pest', ['tail' => 2]);
+    Process::fake(['git status*' => Process::result(output: " M app/Money.php\n"), '*' => Process::result(output: "\e[41;1m FAILED \e[49;22m \e[1mTests\\Unit\\MoneyTest\e[22m \e[90m>\e[39m it formats euros\n  \e[90mTests:\e[39m    \e[31;1m1 failed\e[39;22m\e[90m,\e[39m\e[39m \e[39m\e[32;1m2 passed\e[39;22m\n", exitCode: 1)]);
+
+    expect($this->runHook(Pest::class, StopInput::fake())->json)->toBe([
+        'decision' => 'block',
+        'reason' => "The test suite is failing. Fix it before you finish:\nFAILED  Tests\\Unit\\MoneyTest > it formats euros\n  Tests:    1 failed, 2 passed",
+    ]);
+});
+
 it('lets Claude stop and warns the user when the suite still fails after Claude was sent back', function () {
     Process::fake(['git status*' => Process::result(output: " M app/Money.php\n"), '*' => Process::result(output: 'Tests:    1 failed', exitCode: 1)]);
 

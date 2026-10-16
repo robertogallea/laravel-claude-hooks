@@ -12,12 +12,12 @@ use RobertoGallea\ClaudeHooks\Inputs\StopInput;
 /**
  * Runs the test suite when Claude is about to stop with PHP files changed, as git sees them from the project
  * path; when git cannot tell (no git, or not a repository), the suite runs anyway. A passing suite is no
- * opinion. A failing one sends Claude back once, with the tail of the output as its next instruction; if the
- * suite still fails when Claude stops again (`stop_hook_active`), Claude may stop and the user is warned, since
- * a failure that needs a human decision cannot be fixed by sending Claude back. It is http-safe: it runs the
- * suite on disk, whichever environment runs it. Like `artisan test`, it runs the suite without the variables of
- * the application's .env file, which the hook process loaded, so phpunit.xml can set the testing ones. Subclass it
- * and override testCommand() to change the command.
+ * opinion. A failing one sends Claude back once, with the tail of the output, without terminal colours, as its
+ * next instruction; if the suite still fails when Claude stops again (`stop_hook_active`), Claude may stop and
+ * the user is warned, since a failure that needs a human decision cannot be fixed by sending Claude back. It is
+ * http-safe: it runs the suite on disk, whichever environment runs it. Like `artisan test`, it runs the suite
+ * without the variables of the application's .env file, which the hook process loaded, so phpunit.xml can set
+ * the testing ones. Subclass it and override testCommand() to change the command.
  */
 #[ClaudeHook(timeout: 300)]
 class Pest extends ReadyMadeHook
@@ -51,7 +51,8 @@ class Pest extends ReadyMadeHook
 
         /** @var int $tail */
         $tail = static::setting('tail', 40);
-        $lines = explode("\n", trim($suite->output()."\n".$suite->errorOutput()));
+        $output = preg_replace('/\e\[[0-9;?]*[A-Za-z]/', '', $suite->output()."\n".$suite->errorOutput()) ?? '';
+        $lines = explode("\n", trim($output));
 
         return $input->block("The test suite is failing. Fix it before you finish:\n".implode("\n", array_slice($lines, -$tail)));
     }
