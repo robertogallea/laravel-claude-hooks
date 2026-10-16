@@ -1,4 +1,4 @@
-![Laravel Claude Hooks: where should this rule live? Hooks in a Laravel app, and the other places a rule can go](art/cover.jpg)
+![Laravel Claude Hooks: rules Claude can't skip, written in Laravel and tested with Pest](art/cover.jpg)
 
 # Laravel Claude Hooks
 
