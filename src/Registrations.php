@@ -5,7 +5,7 @@ namespace RobertoGallea\ClaudeHooks;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Contracts\Foundation\Application;
 use ReflectionClass;
-use RobertoGallea\ClaudeHooks\Attributes\Registration as Declared;
+use RobertoGallea\ClaudeHooks\Attributes\ClaudeHook;
 use RobertoGallea\ClaudeHooks\Inputs\GenericInput;
 
 /** Derives Registrations from Hook Commands. */
@@ -49,13 +49,13 @@ final class Registrations
     {
         $declared = array_map(
             fn ($attribute) => $attribute->newInstance(),
-            (new ReflectionClass($command))->getAttributes(Declared::class),
-        ) ?: [new Declared];
+            (new ReflectionClass($command))->getAttributes(ClaudeHook::class),
+        ) ?: [new ClaudeHook];
 
         /** @var HookCommand $instance */
         $instance = $this->app->make($command);
 
-        return array_map(fn (Declared $declared) => $this->validated(new Registration(
+        return array_map(fn (ClaudeHook $declared) => $this->validated(new Registration(
             command: $command,
             signature: (string) $instance->getName(),
             event: $this->event($command, $declared),
@@ -76,7 +76,7 @@ final class Registrations
      *
      * @param  class-string<HookCommand>  $command
      */
-    private function event(string $command, Declared $declared): Event
+    private function event(string $command, ClaudeHook $declared): Event
     {
         $accepted = $command::inputClasses();
 
@@ -91,7 +91,7 @@ final class Registrations
         $event = count($accepted) === 1 ? $accepted[0]::event() : null;
 
         return $event ?? throw new InvalidRegistration(count($accepted) > 1
-            ? "{$command}::hook() takes a union of Hook Inputs, so each Registration must name its event, as in #[Registration(event: Event::{$accepted[0]::event()?->value})]."
+            ? "{$command}::hook() takes a union of Hook Inputs, so each Registration must name its event, as in #[ClaudeHook(event: Event::{$accepted[0]::event()?->value})]."
             : "{$command}::hook() takes the generic Hook Input, so each Registration must name its event.");
     }
 
@@ -109,6 +109,18 @@ final class Registrations
 
         if ($registration->matcher !== null && ! $registration->event->takesMatcher()) {
             throw new InvalidRegistration("{$command} sets a matcher on {$event}, which takes none: Claude Code would ignore it.");
+        }
+
+        if ($registration->failClosed) {
+            if (! $registration->event->honoursOnFailure()) {
+                throw new InvalidRegistration("{$command} fails closed on {$event}, where Claude Code ignores onFailure: blocking would send Claude back to work on a hook it cannot repair.");
+            }
+
+            foreach (['async' => $registration->async, 'asyncRewake' => $registration->asyncRewake] as $field => $set) {
+                if ($set) {
+                    throw new InvalidRegistration("{$command} fails closed with {$field}, but Claude Code ignores onFailure on background hooks: run it in the foreground or let it fail open.");
+                }
+            }
         }
 
         if ($registration->transport === Transport::Http) {

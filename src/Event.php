@@ -83,6 +83,15 @@ enum Event: string
     }
 
     /**
+     * Whether a failing hook on this event can block it with `onFailure: "block"`. On `Stop`, `SubagentStop`,
+     * `TaskCompleted` and `TeammateIdle`, blocking sends Claude back to work, so Claude Code ignores the field.
+     */
+    public function honoursOnFailure(): bool
+    {
+        return ! in_array($this, [self::Stop, self::SubagentStop, self::TaskCompleted, self::TeammateIdle], true);
+    }
+
+    /**
      * The tool events, the only ones that evaluate `if`.
      *
      * @return list<self>

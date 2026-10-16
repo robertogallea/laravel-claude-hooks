@@ -1,7 +1,7 @@
 <?php
 
 use PHPUnit\Framework\AssertionFailedError;
-use RobertoGallea\ClaudeHooks\Attributes\Registration;
+use RobertoGallea\ClaudeHooks\Attributes\ClaudeHook;
 use RobertoGallea\ClaudeHooks\Event;
 use RobertoGallea\ClaudeHooks\HookCommand;
 use RobertoGallea\ClaudeHooks\HookResponse;
@@ -9,14 +9,15 @@ use RobertoGallea\ClaudeHooks\Inputs\GenericInput;
 use RobertoGallea\ClaudeHooks\Inputs\PostToolUseInput;
 use RobertoGallea\ClaudeHooks\Inputs\PreToolUseInput;
 use RobertoGallea\ClaudeHooks\Inputs\StopInput;
+use RobertoGallea\ClaudeHooks\Inputs\SubagentStopInput;
 use RobertoGallea\ClaudeHooks\InvalidRegistration;
 use RobertoGallea\ClaudeHooks\Registrations;
 use RobertoGallea\ClaudeHooks\Tests\Fixtures\GuardEnvFiles;
 use RobertoGallea\ClaudeHooks\Tests\Fixtures\SharedContext;
 use RobertoGallea\ClaudeHooks\Transport;
 
-#[Registration(if: 'Edit(*.php)')]
-#[Registration(if: 'Write(*.php)')]
+#[ClaudeHook(if: 'Edit(*.php)')]
+#[ClaudeHook(if: 'Write(*.php)')]
 class FormatsPhpFiles extends HookCommand
 {
     protected $signature = 'registration:formats-php-files';
@@ -27,14 +28,14 @@ class FormatsPhpFiles extends HookCommand
     }
 }
 
-#[Registration(matcher: 'startup', event: Event::SessionStart)]
-#[Registration(event: Event::UserPromptSubmit)]
+#[ClaudeHook(matcher: 'startup', event: Event::SessionStart)]
+#[ClaudeHook(event: Event::UserPromptSubmit)]
 class GreetsEverySession extends SharedContext {}
 
-#[Registration(event: Event::Stop)]
+#[ClaudeHook(event: Event::Stop)]
 class StopsOnPostToolUse extends FormatsPhpFiles {}
 
-#[Registration(if: 'Bash(git *)')]
+#[ClaudeHook(if: 'Bash(git *)')]
 class FiltersStopWithIf extends HookCommand
 {
     protected $signature = 'registration:filters-stop-with-if';
@@ -45,10 +46,10 @@ class FiltersStopWithIf extends HookCommand
     }
 }
 
-#[Registration(matcher: 'Bash')]
+#[ClaudeHook(matcher: 'Bash')]
 class MatchesStop extends FiltersStopWithIf {}
 
-#[Registration(matcher: 'Bash', if: 'Bash(php artisan *)', timeout: 30, statusMessage: 'Checking the command', failClosed: true, transport: Transport::Http)]
+#[ClaudeHook(matcher: 'Bash', if: 'Bash(php artisan *)', timeout: 30, statusMessage: 'Checking the command', failClosed: true, transport: Transport::Http)]
 class GuardsArtisanOverHttp extends HookCommand
 {
     protected $signature = 'registration:guards-artisan-over-http';
@@ -59,13 +60,13 @@ class GuardsArtisanOverHttp extends HookCommand
     }
 }
 
-#[Registration(async: true, transport: Transport::Http)]
+#[ClaudeHook(async: true, transport: Transport::Http)]
 class RunsAsyncOverHttp extends GuardsArtisanOverHttp {}
 
-#[Registration(asyncRewake: true, transport: Transport::Http)]
+#[ClaudeHook(asyncRewake: true, transport: Transport::Http)]
 class RewakesOverHttp extends GuardsArtisanOverHttp {}
 
-#[Registration(transport: Transport::Http)]
+#[ClaudeHook(transport: Transport::Http)]
 class ReadsClaudesDatabaseOverHttp extends GuardsArtisanOverHttp
 {
     public static function httpSafe(): bool
@@ -74,10 +75,44 @@ class ReadsClaudesDatabaseOverHttp extends GuardsArtisanOverHttp
     }
 }
 
-#[Registration(asyncRewake: true)]
+#[ClaudeHook(asyncRewake: true)]
 class RunsTestsInTheBackground extends FiltersStopWithIf {}
 
-#[Registration(matcher: 'opus', event: Event::PreModelSwitch)]
+#[ClaudeHook(failClosed: true)]
+class FailsClosedOnStop extends FiltersStopWithIf {}
+
+#[ClaudeHook(failClosed: true)]
+class FailsClosedOnSubagentStop extends HookCommand
+{
+    protected $signature = 'registration:fails-closed-on-subagent-stop';
+
+    public function hook(SubagentStopInput $input): ?HookResponse
+    {
+        return null;
+    }
+}
+
+#[ClaudeHook(event: Event::TaskCompleted, failClosed: true)]
+class FailsClosedOnTaskCompleted extends HookCommand
+{
+    protected $signature = 'registration:fails-closed-on-task-completed';
+
+    public function hook(GenericInput $input): ?HookResponse
+    {
+        return null;
+    }
+}
+
+#[ClaudeHook(event: Event::TeammateIdle, failClosed: true)]
+class FailsClosedOnTeammateIdle extends FailsClosedOnTaskCompleted {}
+
+#[ClaudeHook(async: true, failClosed: true)]
+class FailsClosedInTheBackground extends GuardEnvFiles {}
+
+#[ClaudeHook(asyncRewake: true, failClosed: true)]
+class FailsClosedOnRewake extends GuardEnvFiles {}
+
+#[ClaudeHook(matcher: 'opus', event: Event::PreModelSwitch)]
 class WatchesModelSwitches extends HookCommand
 {
     protected $signature = 'registration:watches-model-switches';
@@ -88,7 +123,7 @@ class WatchesModelSwitches extends HookCommand
     }
 }
 
-#[Registration]
+#[ClaudeHook]
 class WatchesAnything extends WatchesModelSwitches {}
 
 it('registers a Hook Command for the event its handler takes', function () {
@@ -178,3 +213,21 @@ it('registers a generic handler for the event it names', function () {
 it('rejects a generic handler without an explicit event', function () {
     app(Registrations::class)->of(WatchesAnything::class);
 })->throws(InvalidRegistration::class, WatchesAnything::class.'::hook() takes the generic Hook Input, so each Registration must name its event');
+
+it('rejects fail-closed on an event where a failure already sends Claude back to work', function (string $command, string $event) {
+    expect(fn () => app(Registrations::class)->of($command))
+        ->toThrow(InvalidRegistration::class, "{$command} fails closed on {$event}, where Claude Code ignores onFailure: blocking would send Claude back to work on a hook it cannot repair.");
+})->with([
+    'Stop' => [FailsClosedOnStop::class, 'Stop'],
+    'SubagentStop' => [FailsClosedOnSubagentStop::class, 'SubagentStop'],
+    'TaskCompleted' => [FailsClosedOnTaskCompleted::class, 'TaskCompleted'],
+    'TeammateIdle' => [FailsClosedOnTeammateIdle::class, 'TeammateIdle'],
+]);
+
+it('rejects fail-closed on a background hook', function (string $command, string $field) {
+    expect(fn () => app(Registrations::class)->of($command))
+        ->toThrow(InvalidRegistration::class, "{$command} fails closed with {$field}, but Claude Code ignores onFailure on background hooks: run it in the foreground or let it fail open.");
+})->with([
+    'async' => [FailsClosedInTheBackground::class, 'async'],
+    'async-rewake' => [FailsClosedOnRewake::class, 'asyncRewake'],
+]);

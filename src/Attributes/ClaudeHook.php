@@ -12,7 +12,7 @@ use RobertoGallea\ClaudeHooks\Transport;
  * only when the handler takes a union.
  */
 #[Attribute(Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
-final readonly class Registration
+final readonly class ClaudeHook
 {
     /**
      * @param  string|null  $matcher  what the event's matcher filters, such as the tool name; passed through unchanged
