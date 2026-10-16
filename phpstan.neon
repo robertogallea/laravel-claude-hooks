@@ -4,3 +4,4 @@ parameters:
         - src
         - tests/Fixtures
         - tests/TestCase.php
+        - bin/check-hook-events

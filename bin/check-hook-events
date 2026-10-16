@@ -1,0 +1,93 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Docs-drift check: compares the Hook Events documented in the Claude Code hooks reference with the Hook Event enum.
+ *
+ * Usage: php bin/check-hook-events [path-or-url]
+ *
+ * The source defaults to the hooks reference. For a URL, the raw markdown (the URL with `.md` appended) is tried
+ * first. The documented Hook Events are the `### EventName` headings of the reference's `## Hook events` section.
+ *
+ * Exit codes: 0 when the lists match, 1 when they differ, 2 when the source cannot be read or holds no events.
+ */
+
+use RobertoGallea\ClaudeHooks\Event;
+
+require dirname(__DIR__).'/vendor/autoload.php';
+
+const HOOKS_REFERENCE = 'https://code.claude.com/docs/en/hooks';
+
+/** Print to stderr and stop with exit code 2: the check could not run. */
+function cannotCheck(string $message): never
+{
+    fwrite(STDERR, $message."\n");
+    exit(2);
+}
+
+/** Read the page: a local file as is, a URL as raw markdown when the docs site serves it. */
+function readSource(string $source): string
+{
+    if (! preg_match('#^https?://#', $source)) {
+        $contents = @file_get_contents($source);
+
+        return $contents === false ? cannotCheck("Cannot read {$source}.") : $contents;
+    }
+
+    foreach ([rtrim($source, '/').'.md', $source] as $url) {
+        $contents = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 30]]));
+
+        if ($contents !== false && str_contains($contents, '## Hook events')) {
+            return $contents;
+        }
+    }
+
+    cannotCheck("Cannot fetch a markdown hooks reference from {$source}.");
+}
+
+/**
+ * The Hook Event names documented in the page: the `###` headings of its `## Hook events` section, skipping code.
+ *
+ * @return list<string>
+ */
+function documentedEvents(string $markdown): array
+{
+    $events = [];
+    $inSection = false;
+    $inFence = false;
+
+    foreach (preg_split('/\R/', $markdown) ?: [] as $line) {
+        if (preg_match('/^\s*(```|~~~)/', $line)) {
+            $inFence = ! $inFence;
+        } elseif ($inFence) {
+            continue;
+        } elseif (preg_match('/^##\s+(.+?)\s*$/', $line, $match)) {
+            $inSection = strcasecmp($match[1], 'Hook events') === 0;
+        } elseif ($inSection && preg_match('/^###\s+`?([A-Z][A-Za-z]+)`?\s*$/', $line, $match)) {
+            $events[] = $match[1];
+        }
+    }
+
+    return array_values(array_unique($events));
+}
+
+$documented = documentedEvents(readSource($argv[1] ?? HOOKS_REFERENCE));
+
+if ($documented === []) {
+    cannotCheck('Found no Hook Events in the hooks reference: has the page changed shape?');
+}
+
+$enum = array_map(fn (Event $event) => $event->value, Event::cases());
+
+$added = array_values(array_diff($documented, $enum));
+$removed = array_values(array_diff($enum, $documented));
+
+if ($added === [] && $removed === []) {
+    echo 'The hooks reference documents the same '.count($enum)." Hook Events as the enum.\n";
+    exit(0);
+}
+
+echo "The hooks reference and the Hook Event enum differ.\n";
+echo 'Added in the reference: '.($added === [] ? '(none)' : implode(', ', $added))."\n";
+echo 'Removed from the reference: '.($removed === [] ? '(none)' : implode(', ', $removed))."\n";
+exit(1);
