@@ -94,7 +94,7 @@ On a `Stop` hook, check `$input->stopHookActive()` before blocking: it is true w
 
 ### Reading the input
 
-Every Hook Input has `sessionId()`, `cwd()`, `permissionMode()`, `transcriptPath()`, `agentId()`, `agentType()`, `eventName()`, the raw `payload` array, and `get('dot.path')` for any field. The tool events add `toolName()`, `toolInput('dot.path')`, `filePath()`, `command()` and `toolUseId()`. The rest are on their own class: `prompt()` on `UserPromptSubmitInput`, `source()` on `SessionStartInput`, `toolResponse()` on `PostToolUseInput`, `lastAssistantMessage()` on `StopInput`, and so on.
+Every Hook Input has `sessionId()`, `cwd()`, `permissionMode()`, `transcriptPath()`, `projectDir()` (the `CLAUDE_PROJECT_DIR` Claude Code sets, else `claude-hooks.project_path`, else the base path), `agentId()`, `agentType()`, `eventName()`, the raw `payload` array, and `get('dot.path')` for any field. The tool events add `toolName()`, `toolInput('dot.path')`, `filePath()`, `command()` and `toolUseId()`. The rest are on their own class: `prompt()` on `UserPromptSubmitInput`, `source()` on `SessionStartInput`, `toolResponse()` on `PostToolUseInput`, `lastAssistantMessage()` on `StopInput`, and so on.
 
 A handler can answer more than one Hook Event with a union type, such as `SessionStartInput|UserPromptSubmitInput`. Each Registration then names its event: `#[ClaudeHook(event: Event::SessionStart)]`.
 

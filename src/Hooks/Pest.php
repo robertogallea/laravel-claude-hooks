@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Process;
 use RobertoGallea\ClaudeHooks\Attributes\ClaudeHook;
 use RobertoGallea\ClaudeHooks\HookResponse;
 use RobertoGallea\ClaudeHooks\Inputs\StopInput;
+use RobertoGallea\ClaudeHooks\ProjectPath;
 
 /**
  * Runs the test suite when Claude is about to stop with PHP files changed, as git sees them from the project
@@ -33,13 +34,13 @@ class Pest extends ReadyMadeHook
 
     public function hook(StopInput $input): ?HookResponse
     {
-        $changes = Process::path($this->projectPath())->run("git status --porcelain -- '*.php'");
+        $changes = Process::path(ProjectPath::configured())->run("git status --porcelain -- '*.php'");
 
         if ($changes->successful() && trim($changes->output()) === '') {
             return null;
         }
 
-        $suite = Process::path($this->projectPath())->env($this->withoutDotenv())->forever()->run($this->testCommand());
+        $suite = Process::path(ProjectPath::configured())->env($this->withoutDotenv())->forever()->run($this->testCommand());
 
         if ($suite->successful()) {
             return null;
@@ -66,7 +67,7 @@ class Pest extends ReadyMadeHook
             return [];
         }
 
-        return [str_starts_with($binary, '/') ? $binary : $this->projectPath().'/'.$binary];
+        return [str_starts_with($binary, '/') ? $binary : ProjectPath::configured().'/'.$binary];
     }
 
     /** The command that runs the test suite. */
@@ -95,11 +96,5 @@ class Pest extends ReadyMadeHook
         $names = array_map(fn (Entry $entry) => $entry->getName(), (new Parser)->parse((string) file_get_contents($file)));
 
         return array_fill_keys($names, false);
-    }
-
-    /** The application's folder, where git and the test suite run. */
-    private function projectPath(): string
-    {
-        return rtrim((string) (config('claude-hooks.project_path') ?? base_path()), '/');
     }
 }

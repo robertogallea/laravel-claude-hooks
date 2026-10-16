@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use RobertoGallea\ClaudeHooks\Hooks\ReadyMadeHook;
 use RobertoGallea\ClaudeHooks\InvalidRegistration;
 use RobertoGallea\ClaudeHooks\ManagedEntry;
+use RobertoGallea\ClaudeHooks\ProjectPath;
 use RobertoGallea\ClaudeHooks\Registration;
 use RobertoGallea\ClaudeHooks\Registrations;
 use RobertoGallea\ClaudeHooks\Settings\SettingsFile;
@@ -38,7 +39,7 @@ class DoctorCommand extends Command
     {
         $this->errors = $this->warnings = $this->hints = [];
         $relative = '.claude/'.($this->option('local') ? 'settings.local.json' : 'settings.json');
-        $path = rtrim((string) (config('claude-hooks.project_path') ?? base_path()), '/').'/'.$relative;
+        $path = ProjectPath::configured().'/'.$relative;
 
         ['valid' => $valid, 'invalid' => $invalid] = $registrations->checked();
 

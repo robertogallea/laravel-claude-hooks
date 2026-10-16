@@ -24,7 +24,7 @@ Every Hook Input with helpers except `PreCompactInput` also has `systemMessage(m
 
 ## Reading the payload
 
-- Every Hook Input: `sessionId()`, `cwd()`, `permissionMode()`, `transcriptPath()`, `agentId()`, `agentType()`, `eventName()`, `get('dot.path', $default)`, and the raw `payload` array.
+- Every Hook Input: `sessionId()`, `cwd()`, `permissionMode()`, `transcriptPath()`, `projectDir()`, `agentId()`, `agentType()`, `eventName()`, `get('dot.path', $default)`, and the raw `payload` array.
 - Tool events (`PreToolUse`, `PermissionRequest`, `PostToolUse`, `PostToolUseFailure`): `toolName()`, `toolInput('dot.path')`, `filePath()` (Edit, Write, Read), `command()` (Bash), `toolUseId()`.
 - `PostToolUseInput`: `toolResponse('dot.path')`, `durationMs()`. `PostToolUseFailureInput`: `error()`, `isInterrupt()`, `durationMs()`.
 - `PermissionRequestInput`: `permissionSuggestions()`.

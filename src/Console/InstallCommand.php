@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use RobertoGallea\ClaudeHooks\InvalidRegistration;
 use RobertoGallea\ClaudeHooks\ManagedEntry;
+use RobertoGallea\ClaudeHooks\ProjectPath;
 use RobertoGallea\ClaudeHooks\Registration;
 use RobertoGallea\ClaudeHooks\Registrations;
 use RobertoGallea\ClaudeHooks\Settings\SettingsFile;
@@ -26,7 +27,7 @@ class InstallCommand extends Command
     public function handle(Registrations $registrations, SettingsMerge $merge): int
     {
         $relative = '.claude/'.($this->option('local') ? 'settings.local.json' : 'settings.json');
-        $path = rtrim((string) (config('claude-hooks.project_path') ?? base_path()), '/').'/'.$relative;
+        $path = ProjectPath::configured().'/'.$relative;
 
         try {
             $merged = $merge->merge(SettingsFile::read($path), $this->transported($registrations->all()), (bool) $this->option('prune'), $this->httpUrl());

@@ -77,3 +77,28 @@ it('shows a system message and stops the session from every event that honours t
     StopInput::class,
     SubagentStopInput::class,
 ]);
+
+describe('the project dir', function () {
+    afterEach(fn () => putenv('CLAUDE_PROJECT_DIR'));
+
+    it('is the one Claude Code sets in CLAUDE_PROJECT_DIR', function () {
+        putenv('CLAUDE_PROJECT_DIR=/home/user/my-project');
+        config(['claude-hooks.project_path' => '/srv/app']);
+
+        expect(seenBy(PreToolUseInput::fake())->projectDir())->toBe('/home/user/my-project');
+    });
+
+    it('is the configured project path when Claude Code sets none', function () {
+        putenv('CLAUDE_PROJECT_DIR');
+        config(['claude-hooks.project_path' => '/srv/app/']);
+
+        expect(seenBy(StopInput::fake())->projectDir())->toBe('/srv/app');
+    });
+
+    it('is the application base path when nothing else names it', function () {
+        putenv('CLAUDE_PROJECT_DIR');
+        config(['claude-hooks.project_path' => null]);
+
+        expect(seenBy(StopInput::fake())->projectDir())->toBe(rtrim(base_path(), '/'));
+    });
+});

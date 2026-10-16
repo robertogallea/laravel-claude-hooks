@@ -4,6 +4,8 @@ namespace RobertoGallea\ClaudeHooks\Inputs;
 
 use Illuminate\Support\Arr;
 use RobertoGallea\ClaudeHooks\Event;
+use RobertoGallea\ClaudeHooks\ProjectPath;
+use RobertoGallea\ClaudeHooks\Wire\ClaudeCode;
 
 /** The typed form of the payload Claude Code sends for one Hook Event. */
 abstract class HookInput
@@ -68,6 +70,18 @@ abstract class HookInput
     public function permissionMode(): ?string
     {
         return $this->get('permission_mode');
+    }
+
+    /**
+     * The project's root folder: the CLAUDE_PROJECT_DIR Claude Code sets for a command hook, else the configured
+     * project path. Over the http Transport the server's environment has no CLAUDE_PROJECT_DIR, so it is the
+     * configured one.
+     */
+    public function projectDir(): string
+    {
+        $dir = getenv(ClaudeCode::PROJECT_DIR);
+
+        return is_string($dir) && $dir !== '' ? rtrim($dir, '/') : ProjectPath::configured();
     }
 
     /** The subagent or in-process teammate the hook fires in, if any. */

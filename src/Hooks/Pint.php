@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Process;
 use RobertoGallea\ClaudeHooks\Attributes\ClaudeHook;
 use RobertoGallea\ClaudeHooks\HookResponse;
 use RobertoGallea\ClaudeHooks\Inputs\PostToolUseInput;
+use RobertoGallea\ClaudeHooks\ProjectPath;
 
 /**
  * Formats every PHP file Claude edits or writes with Pint, run quietly on that file from the project path, so
@@ -36,7 +37,7 @@ class Pint extends ReadyMadeHook
             return null;
         }
 
-        $result = Process::path($this->projectPath())->run([$this->binary(), '--quiet', $file]);
+        $result = Process::path(ProjectPath::configured())->run([$this->binary(), '--quiet', $file]);
 
         if ($result->successful()) {
             return null;
@@ -58,12 +59,6 @@ class Pint extends ReadyMadeHook
         /** @var string|null $binary */
         $binary = static::setting('binary');
 
-        return $binary ?? $this->projectPath().'/vendor/bin/pint';
-    }
-
-    /** The application's folder, where Pint finds its pint.json. */
-    private function projectPath(): string
-    {
-        return rtrim((string) (config('claude-hooks.project_path') ?? base_path()), '/');
+        return $binary ?? ProjectPath::configured().'/vendor/bin/pint';
     }
 }

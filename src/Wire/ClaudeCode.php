@@ -23,6 +23,9 @@ final class ClaudeCode
     /** The path, under the application's URL, of the route the http Transport posts to. */
     public const HTTP_PATH = 'claude-hooks';
 
+    /** The environment variable in which Claude Code passes a command hook the project's root folder. */
+    public const PROJECT_DIR = 'CLAUDE_PROJECT_DIR';
+
     /** The environment variable from which Claude Code sends the http Transport's bearer token. */
     private const HTTP_TOKEN = 'CLAUDE_HOOKS_TOKEN';
 
