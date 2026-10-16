@@ -40,6 +40,22 @@ return [
             'timeout' => null,
         ],
 
+        // Tells Claude, at the start of every session (also on resume, clear and compaction), the Laravel
+        // and PHP versions, the environment, the default connection and the pending migrations, one line
+        // each; set a line to false to leave it out. Paths null means the paths of guard-migrations, then
+        // database_path('migrations'). Not http-safe: it describes Claude Code's environment, not a server's.
+        'session-context' => [
+            'enabled' => false,
+            'lines' => [
+                'versions' => true,
+                'environment' => true,
+                'connection' => true,
+                'migrations' => true,
+            ],
+            'paths' => null,
+            'timeout' => null,
+        ],
+
     ],
 
     /*

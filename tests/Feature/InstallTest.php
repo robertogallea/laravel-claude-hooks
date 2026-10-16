@@ -406,3 +406,15 @@ it('writes the Ready-made guard-artisan so that Claude Code blocks the command w
         ],
     ]);
 });
+
+it('writes the Ready-made session-context for SessionStart without a matcher', function () {
+    enableReadyMadeHook('session-context');
+
+    $this->artisan('claude-hooks:install')->assertSuccessful();
+
+    expect(json_decode(settings(), true)['hooks'])->toBe([
+        'SessionStart' => [
+            ['hooks' => [['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" claude-hooks:session-context']]],
+        ],
+    ]);
+});
