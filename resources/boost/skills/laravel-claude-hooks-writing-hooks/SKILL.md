@@ -85,7 +85,7 @@ class GuardTranslations extends HookCommand
 
 - `matcher`: the tool name, or a regex of names, on tool events: `'Edit|Write'`, `'Bash'`. Events such as `Stop` and `UserPromptSubmit` take none.
 - `if`: one permission rule, such as `'Bash(php artisan *)'`, on tool events only. Claude Code evaluates it before starting PHP, so add one whenever the rule concerns a subset of calls. The attribute is repeatable: two filters are two attributes, since `if` has no `||`.
-- `timeout`, `statusMessage`, `async`, `asyncRewake`, `transport`, and `event` when `hook()` takes a union such as `SessionStartInput|UserPromptSubmitInput`.
+- `timeout`, `statusMessage`, `async`, `transport`, and `event` when `hook()` takes a union such as `SessionStartInput|UserPromptSubmitInput`. Never set `asyncRewake`: Claude Code wakes Claude only when a background hook exits 2, a Hook Command never does, and install rejects it.
 
 ### Fail-open or fail-closed
 

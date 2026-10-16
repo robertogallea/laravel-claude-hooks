@@ -123,7 +123,6 @@ final class ClaudeCode
             'timeout' => $registration->timeout,
             'statusMessage' => $registration->statusMessage,
             'async' => $registration->async ?: null,
-            'asyncRewake' => $registration->asyncRewake ?: null,
             'onFailure' => $registration->failClosed ? 'block' : null,
         ]);
     }

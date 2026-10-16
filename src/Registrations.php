@@ -92,7 +92,7 @@ final class Registrations
         /** @var HookCommand $instance */
         $instance = $this->app->make($command);
 
-        return array_map(fn (ClaudeHook $declared) => fn () => $this->validated(new Registration(
+        return array_map(fn (ClaudeHook $declared) => fn () => $this->validated($declared, new Registration(
             command: $command,
             signature: (string) $instance->getName(),
             event: $this->event($command, $declared),
@@ -101,7 +101,6 @@ final class Registrations
             timeout: $declared->timeout,
             statusMessage: $declared->statusMessage,
             async: $declared->async,
-            asyncRewake: $declared->asyncRewake,
             failClosed: $declared->failClosed,
             transport: $declared->transport,
             httpSafe: $command::httpSafe(),
@@ -147,10 +146,14 @@ final class Registrations
             : "{$command}::hook() takes the generic Hook Input, so each Registration must name its event.");
     }
 
-    private function validated(Registration $registration): Registration
+    private function validated(ClaudeHook $declared, Registration $registration): Registration
     {
         $command = $registration->command;
         $event = $registration->event->value;
+
+        if ($declared->asyncRewake) {
+            throw new InvalidRegistration("{$command} sets asyncRewake, but Claude Code wakes Claude only when a background hook exits 2, and a Hook Command never does (ADR 0003): use async, or run it in the foreground.");
+        }
 
         if ($registration->if !== null && ! $registration->event->evaluatesIf()) {
             $tools = array_map(fn (Event $event) => $event->value, Event::toolEvents());
@@ -168,18 +171,14 @@ final class Registrations
                 throw new InvalidRegistration("{$command} fails closed on {$event}, where Claude Code ignores onFailure: blocking would send Claude back to work on a hook it cannot repair.");
             }
 
-            foreach (['async' => $registration->async, 'asyncRewake' => $registration->asyncRewake] as $field => $set) {
-                if ($set) {
-                    throw new InvalidRegistration("{$command} fails closed with {$field}, but Claude Code ignores onFailure on background hooks: run it in the foreground or let it fail open.");
-                }
+            if ($registration->async) {
+                throw new InvalidRegistration("{$command} fails closed with async, but Claude Code ignores onFailure on background hooks: run it in the foreground or let it fail open.");
             }
         }
 
         if ($registration->transport === Transport::Http) {
-            foreach (['async' => $registration->async, 'asyncRewake' => $registration->asyncRewake] as $field => $set) {
-                if ($set) {
-                    throw new InvalidRegistration("{$command} sets {$field} on the http Transport, which runs only in the foreground: use the command Transport.");
-                }
+            if ($registration->async) {
+                throw new InvalidRegistration("{$command} sets async on the http Transport, which runs only in the foreground: use the command Transport.");
             }
 
             if (! $registration->httpSafe) {

@@ -117,14 +117,13 @@ php artisan claude-hooks:guard-translations --payload=storage/payload.json --pre
 | `timeout` | seconds before Claude Code cancels the hook |
 | `statusMessage` | the spinner message while the hook runs |
 | `async` | run in the background, without blocking |
-| `asyncRewake` | run in the background, and wake Claude up when it fails |
 | `failClosed` | block the action when the hook fails, instead of letting it proceed |
 | `transport` | `Transport::Command` (default) or `Transport::Http` |
 | `event` | the Hook Event, needed only when `hook()` takes a union |
 
 The attribute is repeatable. Claude Code has no `||` in an `if` filter, so two filters are two Registrations: the Ready-made `pint` hook declares `#[ClaudeHook(matcher: 'Edit|Write', if: 'Edit(*.php)')]` and the same with `Write(*.php)`.
 
-Install and doctor reject a Registration that Claude Code would silently ignore or never run: an `if` on an event that is not a tool event, a matcher on an event that takes none (`Stop`, `UserPromptSubmit`, `PostToolBatch` and a few others), `failClosed` on `Stop` or `SubagentStop`, `failClosed` together with `async`, and `async` over http.
+Install and doctor reject a Registration that Claude Code would silently ignore or never run: an `if` on an event that is not a tool event, a matcher on an event that takes none (`Stop`, `UserPromptSubmit`, `PostToolBatch` and a few others), `failClosed` on `Stop` or `SubagentStop`, `failClosed` together with `async`, and `async` over http. They also reject `asyncRewake`: Claude Code wakes Claude only when a background hook exits 2, and a Hook Command never does.
 
 ### Fail-open, unless you ask
 

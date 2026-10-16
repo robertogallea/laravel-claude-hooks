@@ -21,7 +21,6 @@ final readonly class Registration
         public ?int $timeout,
         public ?string $statusMessage,
         public bool $async,
-        public bool $asyncRewake,
         public bool $failClosed,
         public Transport $transport,
         public bool $httpSafe,
@@ -32,7 +31,7 @@ final readonly class Registration
     {
         return new self(
             $this->command, $this->signature, $this->event, $this->matcher, $this->if, $this->timeout,
-            $this->statusMessage, $this->async, $this->asyncRewake, $this->failClosed, Transport::Http, $this->httpSafe,
+            $this->statusMessage, $this->async, $this->failClosed, Transport::Http, $this->httpSafe,
         );
     }
 }

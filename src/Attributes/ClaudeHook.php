@@ -20,7 +20,7 @@ final readonly class ClaudeHook
      * @param  int|null  $timeout  seconds before Claude Code cancels the hook
      * @param  string|null  $statusMessage  the spinner message while the hook runs
      * @param  bool  $async  run in the background without blocking (command Transport only)
-     * @param  bool  $asyncRewake  run in the background and wake Claude when it fails (command Transport only)
+     * @param  bool  $asyncRewake  rejected: Claude Code wakes Claude only when a background hook exits 2, and a Hook Command never does (ADR 0003)
      * @param  bool  $failClosed  block the action when the hook fails, instead of failing open
      */
     public function __construct(

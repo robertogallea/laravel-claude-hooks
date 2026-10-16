@@ -22,7 +22,7 @@ class InstallGuardsArtisan extends HookCommand
 }
 
 #[ClaudeHook(if: 'Edit(*.php)', async: true)]
-#[ClaudeHook(if: 'Write(*.php)', asyncRewake: true)]
+#[ClaudeHook(if: 'Write(*.php)', timeout: 60)]
 class InstallFormatsPhp extends HookCommand
 {
     protected $signature = 'install:format-php';
@@ -126,7 +126,7 @@ it('writes every Registration field the Settings Entry handler takes', function 
         'PostToolUse' => [
             ['hooks' => [
                 ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" install:format-php', 'if' => 'Edit(*.php)', 'async' => true],
-                ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" install:format-php', 'if' => 'Write(*.php)', 'asyncRewake' => true],
+                ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" install:format-php', 'if' => 'Write(*.php)', 'timeout' => 60],
             ]],
         ],
     ]);
@@ -269,7 +269,7 @@ it('updates the Managed Entry whose if filter changed and keeps the one that did
     hookCommands(InstallFormatsPhp::class);
     givenSettings(<<<'JSON'
         {"hooks": {"PostToolUse": [{"hooks": [
-          {"type": "command", "command": "php \"$CLAUDE_PROJECT_DIR/artisan\" install:format-php", "if": "Write(*.php)", "asyncRewake": true},
+          {"type": "command", "command": "php \"$CLAUDE_PROJECT_DIR/artisan\" install:format-php", "if": "Write(*.php)", "timeout": 60},
           {"type": "command", "command": "php \"$CLAUDE_PROJECT_DIR/artisan\" install:format-php", "if": "Edit(*.blade.php)"}
         ]}]}}
         JSON);
@@ -280,7 +280,7 @@ it('updates the Managed Entry whose if filter changed and keeps the one that did
         ->assertSuccessful();
 
     expect(json_decode(settings(), true)['hooks']['PostToolUse'][0]['hooks'])->toBe([
-        ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" install:format-php', 'if' => 'Write(*.php)', 'asyncRewake' => true],
+        ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" install:format-php', 'if' => 'Write(*.php)', 'timeout' => 60],
         ['type' => 'command', 'command' => 'php "$CLAUDE_PROJECT_DIR/artisan" install:format-php', 'if' => 'Edit(*.php)', 'async' => true],
     ]);
 });

@@ -63,9 +63,6 @@ class GuardsArtisanOverHttp extends HookCommand
 #[ClaudeHook(async: true, transport: Transport::Http)]
 class RunsAsyncOverHttp extends GuardsArtisanOverHttp {}
 
-#[ClaudeHook(asyncRewake: true, transport: Transport::Http)]
-class RewakesOverHttp extends GuardsArtisanOverHttp {}
-
 #[ClaudeHook(transport: Transport::Http)]
 class ReadsClaudesDatabaseOverHttp extends GuardsArtisanOverHttp
 {
@@ -76,7 +73,7 @@ class ReadsClaudesDatabaseOverHttp extends GuardsArtisanOverHttp
 }
 
 #[ClaudeHook(asyncRewake: true)]
-class RunsTestsInTheBackground extends FiltersStopWithIf {}
+class RewakesClaudeOnFailure extends FiltersStopWithIf {}
 
 #[ClaudeHook(failClosed: true)]
 class FailsClosedOnStop extends FiltersStopWithIf {}
@@ -108,9 +105,6 @@ class FailsClosedOnTeammateIdle extends FailsClosedOnTaskCompleted {}
 
 #[ClaudeHook(async: true, failClosed: true)]
 class FailsClosedInTheBackground extends GuardEnvFiles {}
-
-#[ClaudeHook(asyncRewake: true, failClosed: true)]
-class FailsClosedOnRewake extends GuardEnvFiles {}
 
 #[ClaudeHook(matcher: 'opus', event: Event::PreModelSwitch)]
 class WatchesModelSwitches extends HookCommand
@@ -172,7 +166,6 @@ it('carries every declared field into the Registration', function () {
         ->timeout->toBe(30)
         ->statusMessage->toBe('Checking the command')
         ->async->toBeFalse()
-        ->asyncRewake->toBeFalse()
         ->failClosed->toBeTrue()
         ->transport->toBe(Transport::Http)
         ->httpSafe->toBeTrue();
@@ -188,19 +181,13 @@ it('defaults to the command Transport, failing open, in the foreground', functio
         ->timeout->toBeNull();
 });
 
-it('accepts async-rewake on the command Transport', function () {
-    [$registration] = app(Registrations::class)->of(RunsTestsInTheBackground::class);
+it('rejects asyncRewake, since a Hook Command never exits 2', function () {
+    app(Registrations::class)->of(RewakesClaudeOnFailure::class);
+})->throws(InvalidRegistration::class, RewakesClaudeOnFailure::class.' sets asyncRewake, but Claude Code wakes Claude only when a background hook exits 2, and a Hook Command never does (ADR 0003): use async, or run it in the foreground.');
 
-    expect($registration->asyncRewake)->toBeTrue();
-});
-
-it('rejects async on the http Transport', function (string $command, string $field) {
-    expect(fn () => app(Registrations::class)->of($command))
-        ->toThrow(InvalidRegistration::class, "{$command} sets {$field} on the http Transport, which runs only in the foreground");
-})->with([
-    'async' => [RunsAsyncOverHttp::class, 'async'],
-    'async-rewake' => [RewakesOverHttp::class, 'asyncRewake'],
-]);
+it('rejects async on the http Transport', function () {
+    app(Registrations::class)->of(RunsAsyncOverHttp::class);
+})->throws(InvalidRegistration::class, RunsAsyncOverHttp::class.' sets async on the http Transport, which runs only in the foreground');
 
 it('rejects the http Transport for a Hook Command that is not http-safe', function () {
     app(Registrations::class)->of(ReadsClaudesDatabaseOverHttp::class);
@@ -224,10 +211,6 @@ it('rejects fail-closed on an event where a failure already sends Claude back to
     'TeammateIdle' => [FailsClosedOnTeammateIdle::class, 'TeammateIdle'],
 ]);
 
-it('rejects fail-closed on a background hook', function (string $command, string $field) {
-    expect(fn () => app(Registrations::class)->of($command))
-        ->toThrow(InvalidRegistration::class, "{$command} fails closed with {$field}, but Claude Code ignores onFailure on background hooks: run it in the foreground or let it fail open.");
-})->with([
-    'async' => [FailsClosedInTheBackground::class, 'async'],
-    'async-rewake' => [FailsClosedOnRewake::class, 'asyncRewake'],
-]);
+it('rejects fail-closed on a background hook', function () {
+    app(Registrations::class)->of(FailsClosedInTheBackground::class);
+})->throws(InvalidRegistration::class, FailsClosedInTheBackground::class.' fails closed with async, but Claude Code ignores onFailure on background hooks: run it in the foreground or let it fail open.');
