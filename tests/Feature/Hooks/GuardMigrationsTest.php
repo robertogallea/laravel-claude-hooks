@@ -117,6 +117,8 @@ it('denies a Bash command that writes to a migration that already ran', function
     'quoted path' => ['sed -i "s/a/b/" "{ran}"'],
     'after another command' => ['php artisan about && sed -i s/a/b/ {ran}'],
     'relative path' => ['sed -i s/a/b/ database/migrations/0001_01_01_000000_create_users_table.php'],
+    'separators inside a quoted sed script' => ['sed -i "s/->unique();/->unique();\\n    \\$table->string(\'nickname\')->nullable();/" {ran}'],
+    'a pipe inside a quoted sed script' => ["sed -i 's/a|b/c/' {ran}"],
 ]);
 
 it('has no opinion on a Bash command that only reads a migration that already ran, or writes one that has not', function (string $command) {

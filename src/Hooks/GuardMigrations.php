@@ -78,7 +78,7 @@ class GuardMigrations extends ReadyMadeHook
 
     /**
      * The files a Bash command may write to. A seatbelt, not a shell parser: it splits the command on `;`, `&&`,
-     * `||`, `|` and newlines, and in each part takes the targets of `>` and `>>`, every file argument of an
+     * `||`, `|` and newlines outside quotes, and in each part takes the targets of `>` and `>>`, every file argument of an
      * in-place `sed` or `perl` (`-i`, `--in-place`), `tee`, `rm` and `mv` (moving a migration away rewrites
      * history too), and the destination of `cp`. Scripts, `xargs`, subshells and the like go around it.
      *
@@ -88,7 +88,7 @@ class GuardMigrations extends ReadyMadeHook
     {
         $written = [];
 
-        foreach (preg_split('/&&|\|\||[;|\n]/', $command) ?: [] as $part) {
+        foreach (preg_split('/("[^"]*"|\'[^\']*\')(*SKIP)(*FAIL)|&&|\|\||[;|\n]/', $command) ?: [] as $part) {
             $words = [];
             $tokens = $this->words($part);
 
