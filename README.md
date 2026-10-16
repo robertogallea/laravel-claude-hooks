@@ -1,3 +1,5 @@
+![Laravel Claude Hooks: where should this rule live? Hooks in a Laravel app, and the other places a rule can go](art/cover.jpg)
+
 # Laravel Claude Hooks
 
 Claude Code hooks as tested Artisan commands in your Laravel app.
