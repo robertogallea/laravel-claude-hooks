@@ -6,7 +6,7 @@ use RobertoGallea\ClaudeHooks\Inputs\GenericInput;
 it('lists every Hook Event of the hooks reference', function () {
     expect(array_map(fn (Event $event) => $event->value, Event::cases()))->toEqualCanonicalizing([
         'SessionStart', 'Setup', 'UserPromptSubmit', 'UserPromptExpansion', 'PreToolUse', 'PermissionRequest',
-        'PermissionDenied', 'PostToolUse', 'PostToolUseFailure', 'PostToolBatch', 'Notification', 'MessageDisplay',
+        'PermissionDenied', 'PostToolUse', 'PostToolUseFailure', 'PostToolBatch', 'PreSkillShellCommand', 'Notification', 'MessageDisplay',
         'SubagentStart', 'SubagentStop', 'TaskCreated', 'TaskCompleted', 'Stop', 'StopFailure', 'TeammateIdle',
         'InstructionsLoaded', 'ConfigChange', 'CwdChanged', 'DirectoryAdded', 'FileChanged', 'WorktreeCreate',
         'WorktreeRemove', 'PreCompact', 'PostCompact', 'PreModelSwitch', 'PostModelSwitch', 'Elicitation',

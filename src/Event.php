@@ -15,6 +15,7 @@ enum Event: string
     case PostToolUse = 'PostToolUse';
     case PostToolUseFailure = 'PostToolUseFailure';
     case PostToolBatch = 'PostToolBatch';
+    case PreSkillShellCommand = 'PreSkillShellCommand';
     case Notification = 'Notification';
     case MessageDisplay = 'MessageDisplay';
     case SubagentStart = 'SubagentStart';

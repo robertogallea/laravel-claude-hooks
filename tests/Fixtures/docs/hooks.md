@@ -176,6 +176,12 @@ Runs after Claude Code completes a compact operation. Use this event to react to
 
 #### PostCompact input
 
+### PreSkillShellCommand
+
+Runs before an injected command, a shell command that runs while a skill or a command such as `/security-review` loads.
+
+#### PreSkillShellCommand input
+
 ### PreModelSwitch
 
 Runs before Claude Code applies a model switch that you or a client requested. Use it to block a switch, require confirmation, or show what the switch will cost before it happens.

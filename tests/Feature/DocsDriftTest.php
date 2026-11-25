@@ -18,7 +18,7 @@ it('finds every documented Hook Event and reports a match with the enum', functi
     $process = checkHookEvents('tests/Fixtures/docs/hooks.md');
 
     expect($process->getExitCode())->toBe(0, $process->getErrorOutput())
-        ->and($process->getOutput())->toBe("The hooks reference documents the same 33 Hook Events as the enum.\n");
+        ->and($process->getOutput())->toBe("The hooks reference documents the same 34 Hook Events as the enum.\n");
 });
 
 it('reports the added and removed Hook Events and exits 1 when the reference has drifted', function () {

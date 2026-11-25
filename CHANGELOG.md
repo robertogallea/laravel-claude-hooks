@@ -4,6 +4,12 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-25
+
+### Added
+
+- `PreSkillShellCommand` Hook Event, which Claude Code fires before the shell commands a skill injects as it loads; it gets the generic Hook Input.
+
 ## [0.1.0] - 2026-10-16
 
 First release.
@@ -24,5 +30,6 @@ First release.
 - A Laravel Boost skill, `laravel-claude-hooks-writing-hooks`, for coding agents.
 - A scheduled CI job that compares the package's Hook Events with the Claude Code hooks reference.
 
-[Unreleased]: https://github.com/robertogallea/laravel-claude-hooks/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/robertogallea/laravel-claude-hooks/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/robertogallea/laravel-claude-hooks/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/robertogallea/laravel-claude-hooks/releases/tag/v0.1.0
